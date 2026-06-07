@@ -1,0 +1,15 @@
+[project]
+name = "pgis-bodyweight"
+version = "0.1.0"
+description = "Glucose-aware bodyweight training engine for the PGIS platform"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["pgis_bodyweight/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
