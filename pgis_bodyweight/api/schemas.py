@@ -97,3 +97,48 @@ class GenerationResponse(BaseModel):
     clearance_required: bool
     clearance_reason: str | None
     program: ProgramOut | None
+
+
+# ── Stateful request/response models ─────────────────────────────────────────
+
+class UserResponse(BaseModel):
+    user_id: str
+
+
+class IntakeSubmitRequest(BaseModel):
+    user_id: str
+    intake: IntakeRequest
+
+
+class IntakeSubmitResponse(BaseModel):
+    intake_id: str
+    clearance_required: bool
+    clearance_reason: str | None
+    hypo_risk: str | None
+
+
+class GenerateFromIntakeRequest(BaseModel):
+    user_id: str
+    intake_id: str
+
+
+class GenerateFromIntakeResponse(BaseModel):
+    program_id: str
+    clearance_required: bool
+    clearance_reason: str | None
+    program: ProgramOut | None
+
+
+class SessionLogRequest(BaseModel):
+    user_id: str
+    per_exercise_rpe: dict[str, float] | None = None
+    notes: str | None = None
+    started_at: str | None = None   # ISO 8601
+    finished_at: str | None = None  # ISO 8601
+
+
+class SessionLogResponse(BaseModel):
+    log_id: str
+    program_id: str
+    week: int
+    day_in_week: int
