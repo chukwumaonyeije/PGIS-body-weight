@@ -1,0 +1,76 @@
+# Squat pattern — progression ladder
+#
+# Each entry is one level (1 = most regressed, 3 = most advanced).
+# Two tracks:
+#   standard  — used when JointFlag.KNEE is not set
+#   knee_safe — used when JointFlag.KNEE is set; must contain zero IDs from
+#               DEEP_KNEE_FLEXION_EXERCISE_IDS or HIGH_IMPACT_EXERCISE_IDS
+#
+# Fields:
+#   exercise_id    : machine-readable ID; must match Exercise table when DB is seeded
+#   sets           : integer
+#   reps_or_time   : string ("10 reps", "30 s", "8 reps per side", etc.)
+#   rest_s         : rest between sets in seconds
+#   target_rpe     : float, Borg CR-10 scale (0–10)
+#   regression_alt : exercise_id of the next-easier substitute (required, non-empty)
+#   progression_alt: exercise_id of the next-harder substitute (required, non-empty)
+#
+# Clinical review status: level-2/3 boundary anchored to Rikli & Jones 2013 (60–64 band).
+# REVIEW: knee_safe track — physician must confirm box_squat and glute_bridge are
+# appropriate substitutes for all knee conditions flagged at intake.
+
+standard:
+  - level: 1
+    exercise_id: chair_assisted_sit_to_stand
+    sets: 2
+    reps_or_time: "8 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: seated_marching
+    progression_alt: box_squat
+
+  - level: 2
+    exercise_id: box_squat
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: chair_assisted_sit_to_stand
+    progression_alt: bodyweight_squat
+
+  - level: 3
+    exercise_id: bodyweight_squat
+    sets: 3
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 7.0
+    regression_alt: box_squat
+    progression_alt: goblet_squat
+
+knee_safe:
+  - level: 1
+    exercise_id: chair_assisted_sit_to_stand
+    sets: 2
+    reps_or_time: "8 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: seated_marching
+    progression_alt: box_squat
+
+  - level: 2
+    exercise_id: box_squat
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: chair_assisted_sit_to_stand
+    progression_alt: glute_bridge
+
+  - level: 3
+    exercise_id: glute_bridge
+    sets: 3
+    reps_or_time: "15 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: box_squat
+    progression_alt: single_leg_glute_bridge

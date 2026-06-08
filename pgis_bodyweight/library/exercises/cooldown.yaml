@@ -1,0 +1,30 @@
+# Cool-down block — fixed sequence, all levels
+#
+# These exercises appear in every session regardless of intake or progression level.
+# REVIEW: physician must confirm this sequence is appropriate for a 60-year-old
+# adult with T2D. No clinical citation for this specific order or duration.
+
+exercises:
+  - exercise_id: seated_hamstring_stretch
+    sets: 1
+    reps_or_time: "30 s per side"
+    rest_s: 0
+    target_rpe: 2.0
+    regression_alt: supine_hamstring_stretch
+    progression_alt: standing_hamstring_stretch
+
+  - exercise_id: chest_opener_stretch
+    sets: 1
+    reps_or_time: "30 s"
+    rest_s: 0
+    target_rpe: 2.0
+    regression_alt: doorway_chest_stretch
+    progression_alt: arm_across_chest_stretch
+
+  - exercise_id: ankle_circles
+    sets: 1
+    reps_or_time: "10 reps per side"
+    rest_s: 0
+    target_rpe: 2.0
+    regression_alt: seated_ankle_circles
+    progression_alt: standing_ankle_circles

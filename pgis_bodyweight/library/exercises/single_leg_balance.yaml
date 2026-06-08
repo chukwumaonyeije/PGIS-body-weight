@@ -1,0 +1,37 @@
+# Single-leg balance pattern — progression ladder
+#
+# Single track (no joint-flag variant at Phase 1).
+# REVIEW: physician must confirm whether JointFlag.KNEE or JointFlag.HIP
+# should trigger a modified track (e.g. exclude single_leg_deadlift as
+# progression_alt at level 3 when hip is flagged).
+# REVIEW: the single_leg_stand_s cutoff used to assign levels is an
+# implementer approximation (patterns.py). A normative reference for
+# 60-year-old adults is needed; physician confirmation required.
+
+levels:
+  - level: 1
+    exercise_id: single_leg_stand_assist
+    sets: 2
+    reps_or_time: "20 s per side"
+    rest_s: 60
+    target_rpe: 4.0
+    regression_alt: seated_heel_raise
+    progression_alt: single_leg_stand
+
+  - level: 2
+    exercise_id: single_leg_stand
+    sets: 2
+    reps_or_time: "30 s per side"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: single_leg_stand_assist
+    progression_alt: single_leg_balance_reach
+
+  - level: 3
+    exercise_id: single_leg_balance_reach
+    sets: 3
+    reps_or_time: "10 reps per side"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: single_leg_stand
+    progression_alt: single_leg_deadlift

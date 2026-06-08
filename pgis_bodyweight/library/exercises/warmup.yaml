@@ -1,0 +1,31 @@
+# Warm-up block — fixed sequence, all levels
+#
+# These exercises appear in every session regardless of intake or progression level.
+# They are not part of a progression ladder; level is always 1.
+# REVIEW: physician must confirm this sequence is appropriate for a 60-year-old
+# adult with T2D. No clinical citation for this specific order or duration.
+
+exercises:
+  - exercise_id: march_in_place
+    sets: 1
+    reps_or_time: "60 s"
+    rest_s: 0
+    target_rpe: 3.0
+    regression_alt: seated_march
+    progression_alt: high_knee_march
+
+  - exercise_id: hip_circle
+    sets: 1
+    reps_or_time: "10 reps per side"
+    rest_s: 0
+    target_rpe: 3.0
+    regression_alt: seated_hip_circle
+    progression_alt: lateral_hip_swing
+
+  - exercise_id: shoulder_roll
+    sets: 1
+    reps_or_time: "10 reps"
+    rest_s: 0
+    target_rpe: 3.0
+    regression_alt: seated_shoulder_roll
+    progression_alt: arm_circle

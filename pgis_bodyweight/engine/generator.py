@@ -13,96 +13,9 @@ from .types import (
 )
 from .safety import check_parq, resolve_hypo_risk, is_impact_suppressed
 from .patterns import resolve_starting_levels
+from pgis_bodyweight.library import load_fixed_block, load_pattern_ladder, load_squat_ladders
 
 ENGINE_VERSION = "0.1.0"
-
-
-# ── Minimal exercise catalog ──────────────────────────────────────────────────
-# Temporary until library/ module is built (Phase 2). Every ExerciseInstance
-# must carry non-empty regression_alt and progression_alt (CLAUDE.md invariant).
-#
-# Invariant enforced here: no exercise ID in any knee-safe map (_SQUAT_KNEE_SAFE,
-# warmup, cooldown, or any non-squat pattern) appears in
-# DEEP_KNEE_FLEXION_EXERCISE_IDS or HIGH_IMPACT_EXERCISE_IDS.
-# The standard squat map intentionally uses bodyweight_squat — it is only selected
-# for users without JointFlag.KNEE.
-
-def _ex(eid, sets, reps, rest, rpe, reg, prog) -> ExerciseInstance:
-    return ExerciseInstance(eid, sets, reps, rest, rpe, reg, prog)
-
-
-# Squat — standard (JointFlag.KNEE not set)
-_SQUAT_STANDARD: dict[int, ExerciseInstance] = {
-    1: _ex("chair_assisted_sit_to_stand", 2, "8 reps",  60, 5.0,
-           "seated_marching",             "box_squat"),
-    2: _ex("box_squat",                   2, "10 reps", 60, 6.0,
-           "chair_assisted_sit_to_stand", "bodyweight_squat"),
-    3: _ex("bodyweight_squat",            3, "12 reps", 60, 7.0,
-           "box_squat",                   "goblet_squat"),
-}
-
-# Squat — knee-safe (JointFlag.KNEE set).
-# No entry contains any ID from DEEP_KNEE_FLEXION_EXERCISE_IDS or
-# HIGH_IMPACT_EXERCISE_IDS — including regression_alt and progression_alt.
-_SQUAT_KNEE_SAFE: dict[int, ExerciseInstance] = {
-    1: _ex("chair_assisted_sit_to_stand", 2, "8 reps",  60, 5.0,
-           "seated_marching",             "box_squat"),
-    2: _ex("box_squat",                   2, "10 reps", 60, 6.0,
-           "chair_assisted_sit_to_stand", "glute_bridge"),
-    3: _ex("glute_bridge",                3, "15 reps", 60, 6.0,
-           "box_squat",                   "single_leg_glute_bridge"),
-}
-
-_HINGE: dict[int, ExerciseInstance] = {
-    1: _ex("hip_hinge_bodyweight",      2, "10 reps",          60, 5.0,
-           "seated_good_morning",       "romanian_deadlift_band"),
-    2: _ex("romanian_deadlift_band",    2, "10 reps",          60, 6.0,
-           "hip_hinge_bodyweight",      "single_leg_deadlift_assist"),
-    3: _ex("single_leg_deadlift_assist",3, "8 reps per side",  60, 7.0,
-           "romanian_deadlift_band",    "single_leg_deadlift"),
-}
-
-_PUSH: dict[int, ExerciseInstance] = {
-    1: _ex("wall_pushup",     2, "10 reps", 60, 5.0, "wall_press_isometric", "incline_pushup"),
-    2: _ex("incline_pushup",  2, "10 reps", 60, 6.0, "wall_pushup",          "knee_pushup"),
-    3: _ex("knee_pushup",     3, "10 reps", 60, 7.0, "incline_pushup",       "full_pushup"),
-}
-
-_PULL: dict[int, ExerciseInstance] = {
-    1: _ex("band_row",    2, "10 reps", 60, 5.0, "seated_row_isometric", "door_row"),
-    2: _ex("door_row",    2, "10 reps", 60, 6.0, "band_row",             "incline_row"),
-    3: _ex("incline_row", 3, "10 reps", 60, 7.0, "door_row",             "inverted_row"),
-}
-
-_CORE: dict[int, ExerciseInstance] = {
-    1: _ex("dead_bug",    2, "5 reps per side",  60, 5.0, "supine_heel_slide", "bird_dog"),
-    2: _ex("bird_dog",    2, "8 reps per side",  60, 6.0, "dead_bug",          "plank_hold"),
-    3: _ex("plank_hold",  3, "20 s",             60, 7.0, "bird_dog",          "side_plank"),
-}
-
-_BALANCE: dict[int, ExerciseInstance] = {
-    1: _ex("single_leg_stand_assist",    2, "20 s per side",  60, 4.0,
-           "seated_heel_raise",          "single_leg_stand"),
-    2: _ex("single_leg_stand",           2, "30 s per side",  60, 5.0,
-           "single_leg_stand_assist",    "single_leg_balance_reach"),
-    3: _ex("single_leg_balance_reach",   3, "10 reps per side", 60, 6.0,
-           "single_leg_stand",           "single_leg_deadlift"),
-}
-
-_WARMUP_EXERCISES: list[ExerciseInstance] = [
-    _ex("march_in_place",  1, "60 s",             0, 3.0, "seated_march",        "high_knee_march"),
-    _ex("hip_circle",      1, "10 reps per side", 0, 3.0, "seated_hip_circle",   "lateral_hip_swing"),
-    _ex("shoulder_roll",   1, "10 reps",          0, 3.0, "seated_shoulder_roll","arm_circle"),
-]
-
-_COOLDOWN_EXERCISES: list[ExerciseInstance] = [
-    _ex("seated_hamstring_stretch", 1, "30 s per side", 0, 2.0,
-        "supine_hamstring_stretch", "standing_hamstring_stretch"),
-    _ex("chest_opener_stretch",     1, "30 s",          0, 2.0,
-        "doorway_chest_stretch",    "arm_across_chest_stretch"),
-    _ex("ankle_circles",            1, "10 reps per side", 0, 2.0,
-        "seated_ankle_circles",     "standing_ankle_circles"),
-]
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
@@ -183,9 +96,9 @@ def _build_session(
         week=week,
         day=day,
         blocks=[
-            Block("warmup",   list(_WARMUP_EXERCISES)),
+            Block("warmup",   load_fixed_block("warmup.yaml")),
             Block("main",     _select_main(levels, knee_flagged)),
-            Block("cooldown", list(_COOLDOWN_EXERCISES)),
+            Block("cooldown", load_fixed_block("cooldown.yaml")),
         ],
         glucose_check_required=(hypo_risk == HypoRisk.ELEVATED),
         preferred_window=None,
@@ -196,14 +109,15 @@ def _select_main(
     levels: dict[MovementPattern, int],
     knee_flagged: bool,
 ) -> list[ExerciseInstance]:
-    squat_map = _SQUAT_KNEE_SAFE if knee_flagged else _SQUAT_STANDARD
+    squat_standard, squat_knee_safe = load_squat_ladders()
+    squat_map = squat_knee_safe if knee_flagged else squat_standard
     return [
         squat_map[levels[MovementPattern.SQUAT]],
-        _HINGE  [levels[MovementPattern.HINGE]],
-        _PUSH   [levels[MovementPattern.HORIZONTAL_PUSH]],
-        _PULL   [levels[MovementPattern.PULL]],
-        _CORE   [levels[MovementPattern.CORE]],
-        _BALANCE[levels[MovementPattern.SINGLE_LEG_BALANCE]],
+        load_pattern_ladder("hinge.yaml")        [levels[MovementPattern.HINGE]],
+        load_pattern_ladder("horizontal_push.yaml")[levels[MovementPattern.HORIZONTAL_PUSH]],
+        load_pattern_ladder("pull.yaml")          [levels[MovementPattern.PULL]],
+        load_pattern_ladder("core.yaml")          [levels[MovementPattern.CORE]],
+        load_pattern_ladder("single_leg_balance.yaml")[levels[MovementPattern.SINGLE_LEG_BALANCE]],
     ]
 
 

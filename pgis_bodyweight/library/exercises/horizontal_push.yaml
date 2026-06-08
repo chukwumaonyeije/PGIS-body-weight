@@ -1,0 +1,35 @@
+# Horizontal push pattern — progression ladder
+#
+# Single track (no joint-flag variant at Phase 1).
+# REVIEW: physician must confirm whether JointFlag.SHOULDER or JointFlag.WRIST
+# should trigger a modified track (e.g. exclude knee_pushup, full_pushup).
+# Push-up thresholds (PUSHUP_LEVEL_THRESHOLDS in types.py) are implementer-derived
+# approximations — not from a normative reference. Physician review required.
+
+levels:
+  - level: 1
+    exercise_id: wall_pushup
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: wall_press_isometric
+    progression_alt: incline_pushup
+
+  - level: 2
+    exercise_id: incline_pushup
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: wall_pushup
+    progression_alt: knee_pushup
+
+  - level: 3
+    exercise_id: knee_pushup
+    sets: 3
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 7.0
+    regression_alt: incline_pushup
+    progression_alt: full_pushup
