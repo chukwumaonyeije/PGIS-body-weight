@@ -98,7 +98,9 @@ class IntakeAssessment:
     functional_tests: FunctionalTests
     days_per_week: int
     minutes_per_session: int
+    fall_risk: bool = False           # self-reported or clinician-flagged; suppresses high-impact
     equipment: list[EquipmentItem] = field(default_factory=list)
+    goals: list[str] = field(default_factory=list)
 
 
 # ── Clinical constants ────────────────────────────────────────────────────────

@@ -16,7 +16,8 @@ from pgis_bodyweight.engine.types import (
     JointFlag,
     HypoRisk,
     MovementPattern,
-    DEEP_KNEE_DOMINANT_EXERCISE_IDS,
+    Sex,
+    DEEP_KNEE_FLEXION_EXERCISE_IDS,
 )
 from pgis_bodyweight.engine.generator import generate_mesocycle
 from pgis_bodyweight.engine.safety import check_parq, resolve_hypo_risk
@@ -31,6 +32,7 @@ def _clean_intake(**overrides) -> IntakeAssessment:
     """Minimal intake with no flags and mid-range functional scores."""
     defaults = dict(
         age=60,
+        sex=Sex.MALE,
         parq_flags=[],
         medication_class=MedicationClass.METFORMIN_ONLY,
         joint_flags=[],
@@ -47,12 +49,17 @@ def _clean_intake(**overrides) -> IntakeAssessment:
 
 
 def _all_exercise_ids(result) -> set[str]:
+    """Collect every exercise ID in the program, including regression/progression alternates."""
     ids: set[str] = set()
     for week in result.program.weeks:
         for session in week.sessions:
             for block in session.blocks:
                 for ex in block.exercises:
                     ids.add(ex.exercise_id)
+                    if ex.regression_alt:
+                        ids.add(ex.regression_alt)
+                    if ex.progression_alt:
+                        ids.add(ex.progression_alt)
     return ids
 
 
@@ -108,15 +115,15 @@ class TestParqGate:
 # ---------------------------------------------------------------------------
 
 class TestKneeFlag:
-    def test_knee_flag_excludes_contraindicated_exercises(self):
+    def test_knee_flag_excludes_deep_flexion_exercises(self):
         intake = _clean_intake(joint_flags=[JointFlag.KNEE])
         result = generate_mesocycle(intake)
         assert result.program is not None
 
         prescribed = _all_exercise_ids(result)
-        forbidden = DEEP_KNEE_DOMINANT_EXERCISE_IDS & prescribed
+        forbidden = DEEP_KNEE_FLEXION_EXERCISE_IDS & prescribed
         assert forbidden == set(), (
-            f"Knee-flagged program contains contraindicated exercises: {forbidden}"
+            f"Knee-flagged program contains deep-flexion exercises: {forbidden}"
         )
 
     def test_knee_flag_substitutes_box_squat_or_glute_bridge(self):
@@ -284,6 +291,12 @@ class TestPerPatternStartingLevel:
         low_levels = resolve_starting_levels(low_sts)
         assert high_levels[MovementPattern.SQUAT] > low_levels[MovementPattern.SQUAT]
         assert high_levels[MovementPattern.HORIZONTAL_PUSH] == low_levels[MovementPattern.HORIZONTAL_PUSH]
+
+    def test_unreviewed_age_band_raises(self):
+        """Engine must raise, not silently fall back, when STS norms for the band are None."""
+        intake = _clean_intake(age=72, sex=Sex.MALE)  # 70-74 band is None
+        with pytest.raises(ValueError, match="No reviewed STS norms"):
+            resolve_starting_levels(intake)
 
 
 # ---------------------------------------------------------------------------
