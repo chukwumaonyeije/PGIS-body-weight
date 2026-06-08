@@ -19,7 +19,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from pgis_bodyweight.models.base import Base
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./pgis_bodyweight.db")
+_raw_url = os.environ.get("DATABASE_URL", "sqlite:///./pgis_bodyweight.db")
+
+# Railway PostgreSQL emits "postgres://" which SQLAlchemy rejects; normalise it.
+DATABASE_URL = _raw_url.replace("postgres://", "postgresql://", 1)
 
 # SQLite needs check_same_thread=False for use across FastAPI threads.
 _connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
