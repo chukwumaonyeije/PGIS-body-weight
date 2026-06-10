@@ -63,11 +63,15 @@ def _push_level(intake: IntakeAssessment) -> int:
 
 
 def _balance_level(intake: IntakeAssessment) -> int:
-    # REVIEW: clinical value needed — thresholds are working placeholders.
-    # Physician must confirm before clinical use.
+    # Thresholds confirmed by physician 2026-06-10.
+    # <5 s: Vellas et al. (1997) — associated with injurious falls; floor-of-
+    #   function threshold; also triggers 2-hand support in the session.
+    # <10 s: Bohannon et al. (2006) mean ± SD data by decade; <10 s consistently
+    #   associated with increased fall risk and all-cause mortality in older adults.
+    #   Also the high-impact suppression threshold in safety.py.
     s = intake.functional_tests.single_leg_stand_s
-    if s < 5.0:   # REVIEW: clinical value needed
+    if s < 5.0:
         return 1
-    if s < 10.0:  # REVIEW: clinical value needed
+    if s < 10.0:
         return 2
     return 3

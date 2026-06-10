@@ -292,10 +292,10 @@ class TestPerPatternStartingLevel:
         assert high_levels[MovementPattern.SQUAT] > low_levels[MovementPattern.SQUAT]
         assert high_levels[MovementPattern.HORIZONTAL_PUSH] == low_levels[MovementPattern.HORIZONTAL_PUSH]
 
-    def test_unreviewed_age_band_raises(self):
-        """Engine must raise, not silently fall back, when STS norms for the band are None."""
-        intake = _clean_intake(age=72, sex=Sex.MALE)  # 70-74 band is None
-        with pytest.raises(ValueError, match="No reviewed STS norms"):
+    def test_age_outside_supported_range_raises(self):
+        """Engine must raise, not silently fall back, when age is outside 60–99."""
+        intake = _clean_intake(age=55)  # below the supported range
+        with pytest.raises(ValueError, match="outside the supported range"):
             resolve_starting_levels(intake)
 
 

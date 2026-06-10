@@ -1,10 +1,14 @@
-# Horizontal push pattern — progression ladder
+# Horizontal push pattern — progression ladders
 #
-# Single track (no joint-flag variant at Phase 1).
-# REVIEW: physician must confirm whether JointFlag.SHOULDER or JointFlag.WRIST
-# should trigger a modified track (e.g. exclude knee_pushup, full_pushup).
-# Push-up thresholds (PUSHUP_LEVEL_THRESHOLDS in types.py) are implementer-derived
-# approximations — not from a normative reference. Physician review required.
+# Three tracks (physician decisions 2026-06-10):
+#   levels         — standard track
+#   shoulder_safe  — JointFlag.SHOULDER; same exercises as standard but L3
+#                    progression_alt replaced: full_pushup → band_chest_press
+#   wrist_safe     — JointFlag.WRIST; all levels use band resistance only;
+#                    no floor hand-bearing or wrist-extension loading
+#
+# Push-up entry thresholds confirmed as capacity screen (not normative); see
+# PUSHUP_LEVEL_THRESHOLDS in types.py.
 
 levels:
   - level: 1
@@ -33,3 +37,59 @@ levels:
     target_rpe: 7.0
     regression_alt: incline_pushup
     progression_alt: full_pushup
+
+shoulder_safe:
+  - level: 1
+    exercise_id: wall_pushup
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: wall_press_isometric
+    progression_alt: incline_pushup
+
+  - level: 2
+    exercise_id: incline_pushup
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: wall_pushup
+    progression_alt: knee_pushup
+
+  - level: 3
+    exercise_id: knee_pushup
+    sets: 3
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 7.0
+    regression_alt: incline_pushup
+    progression_alt: band_chest_press
+
+wrist_safe:
+  - level: 1
+    exercise_id: band_wall_press
+    sets: 2
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: isometric_chest_squeeze
+    progression_alt: band_chest_press
+
+  - level: 2
+    exercise_id: band_chest_press
+    sets: 2
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: band_wall_press
+    progression_alt: band_chest_press_narrow
+
+  - level: 3
+    exercise_id: band_chest_press_narrow
+    sets: 3
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 7.0
+    regression_alt: band_chest_press
+    progression_alt: band_fly

@@ -159,7 +159,8 @@ class TestGenerateEndpoint:
         r = client.post("/v1/programs/generate", json={**CLEAN_INTAKE, "sex": "unknown"})
         assert r.status_code == 422
 
-    def test_unreviewed_age_band_returns_422(self):
-        intake = {**CLEAN_INTAKE, "age": 72}
+    def test_age_outside_supported_range_returns_422(self):
+        """Ages below 60 are not supported and must return 422."""
+        intake = {**CLEAN_INTAKE, "age": 55}
         r = client.post("/v1/programs/generate", json=intake)
         assert r.status_code == 422

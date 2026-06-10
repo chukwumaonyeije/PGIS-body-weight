@@ -185,3 +185,171 @@ class TestHighImpactRestriction:
         result = generate_mesocycle(make_intake(**triggers))
         produced = all_exercise_ids(result)
         assert produced.isdisjoint(HIGH_IMPACT_EXERCISE_IDS)
+
+
+# ---------------------------------------------------------------------------
+# Lower-back flag — hinge substitution and core restriction
+# ---------------------------------------------------------------------------
+
+class TestLowerBackFlag:
+    """
+    JointFlag.LOWER_BACK must:
+      (a) exclude single-leg deadlift variants from the hinge pattern,
+      (b) restrict the core pattern to dead_bug and bird_dog (no plank).
+    """
+
+    def test_no_single_leg_deadlift_assist_when_lower_back_flagged(self):
+        # single_leg_deadlift_assist is the standard hinge L3 primary exercise —
+        # must not appear in any position when lower_back is flagged.
+        # single_leg_deadlift (unassisted) may appear as the standard balance
+        # track's progression_alt; that's the HIP flag's concern, not LOWER_BACK.
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.LOWER_BACK]))
+        produced = all_exercise_ids(result)
+        assert "single_leg_deadlift_assist" not in produced, (
+            "Lower-back flag must exclude single-leg deadlift from hinge pattern; "
+            "found single_leg_deadlift_assist"
+        )
+
+    def test_no_plank_when_lower_back_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.LOWER_BACK]))
+        produced = all_exercise_ids(result)
+        excluded = {"plank_hold", "side_plank"}
+        assert produced.isdisjoint(excluded), (
+            "Lower-back flag must restrict core to dead_bug/bird_dog; found "
+            f"{produced & excluded}"
+        )
+
+    def test_hinge_pattern_present_when_lower_back_flagged(self):
+        """The hinge pattern must survive via the bilateral-only track."""
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.LOWER_BACK]))
+        produced = all_exercise_ids(result)
+        bilateral_hinge = {
+            "hip_hinge_bodyweight", "romanian_deadlift_band",
+            "good_morning_band", "sumo_deadlift_band",
+        }
+        assert produced & bilateral_hinge, (
+            "Lower-back flag must substitute a bilateral hinge; none present"
+        )
+
+    def test_rules_applied_records_lower_back_decisions(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.LOWER_BACK]))
+        assert result.program is not None
+        rules = result.program.rules_applied
+        assert "lower_back_flag_hinge_substitution" in rules
+        assert "lower_back_flag_core_restriction" in rules
+
+
+# ---------------------------------------------------------------------------
+# Hip flag — balance progression cap
+# ---------------------------------------------------------------------------
+
+class TestHipFlag:
+    """
+    JointFlag.HIP must cap the balance pattern so single_leg_deadlift does not
+    appear as a progression target.
+    """
+
+    def test_single_leg_deadlift_excluded_when_hip_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.HIP]))
+        produced = all_exercise_ids(result)
+        assert "single_leg_deadlift" not in produced, (
+            "Hip flag must exclude single_leg_deadlift from the balance pattern"
+        )
+
+    def test_balance_pattern_present_when_hip_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.HIP]))
+        produced = all_exercise_ids(result)
+        balance_exercises = {
+            "single_leg_stand_assist", "single_leg_stand", "single_leg_balance_reach",
+        }
+        assert produced & balance_exercises, (
+            "Hip flag must preserve the balance pattern"
+        )
+
+    def test_rules_applied_records_hip_cap(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.HIP]))
+        assert result.program is not None
+        assert "hip_flag_balance_progression_cap" in result.program.rules_applied
+
+
+# ---------------------------------------------------------------------------
+# Shoulder flag — push modification and band-only pull
+# ---------------------------------------------------------------------------
+
+class TestShoulderFlag:
+    """
+    JointFlag.SHOULDER must:
+      (a) exclude full_pushup from the push pattern,
+      (b) restrict pull to band-only exercises (no inverted_row, door_row).
+    """
+
+    def test_full_pushup_excluded_when_shoulder_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.SHOULDER]))
+        produced = all_exercise_ids(result)
+        assert "full_pushup" not in produced, (
+            "Shoulder flag must exclude full_pushup from the push pattern"
+        )
+
+    def test_inverted_row_excluded_when_shoulder_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.SHOULDER]))
+        produced = all_exercise_ids(result)
+        assert "inverted_row" not in produced, (
+            "Shoulder flag must exclude inverted_row from the pull pattern"
+        )
+
+    def test_push_pattern_present_when_shoulder_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.SHOULDER]))
+        produced = all_exercise_ids(result)
+        safe_push = {"wall_pushup", "incline_pushup", "knee_pushup"}
+        assert produced & safe_push, (
+            "Shoulder flag must preserve the push pattern with safe alternatives"
+        )
+
+    def test_pull_is_band_only_when_shoulder_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.SHOULDER]))
+        produced = all_exercise_ids(result)
+        non_band_pull = {"door_row", "incline_row", "inverted_row"}
+        assert produced.isdisjoint(non_band_pull), (
+            "Shoulder flag: pull must be band-only; found non-band exercises: "
+            f"{produced & non_band_pull}"
+        )
+
+    def test_rules_applied_records_shoulder_decisions(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.SHOULDER]))
+        assert result.program is not None
+        rules = result.program.rules_applied
+        assert "shoulder_flag_push_modification" in rules
+        assert "shoulder_flag_pull_band_only" in rules
+
+
+# ---------------------------------------------------------------------------
+# Wrist flag — band-only push
+# ---------------------------------------------------------------------------
+
+class TestWristFlag:
+    """
+    JointFlag.WRIST must replace the push pattern with band-only exercises
+    (no floor hand-bearing or wrist-extension loading).
+    """
+
+    def test_floor_push_exercises_excluded_when_wrist_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.WRIST]))
+        produced = all_exercise_ids(result)
+        floor_push = {"wall_pushup", "incline_pushup", "knee_pushup", "full_pushup"}
+        assert produced.isdisjoint(floor_push), (
+            "Wrist flag must replace push track with band-only; found floor exercises: "
+            f"{produced & floor_push}"
+        )
+
+    def test_band_push_present_when_wrist_flagged(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.WRIST]))
+        produced = all_exercise_ids(result)
+        band_push = {"band_wall_press", "band_chest_press", "band_chest_press_narrow"}
+        assert produced & band_push, (
+            "Wrist flag must include band-only push alternatives"
+        )
+
+    def test_rules_applied_records_wrist_decision(self):
+        result = generate_mesocycle(make_intake(joint_flags=[JointFlag.WRIST]))
+        assert result.program is not None
+        assert "wrist_flag_push_band_only" in result.program.rules_applied

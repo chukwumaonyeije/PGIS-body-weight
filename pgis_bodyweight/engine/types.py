@@ -9,9 +9,11 @@ from typing import NamedTuple
 class Sex(str, Enum):
     MALE = "male"
     FEMALE = "female"
-    # REVIEW: the intake form should handle non-binary and prefer-not-to-say
-    # responses. Rikli & Jones norms are binary (male/female); when this is
-    # resolved, apply the FEMALE (lower-threshold) set as the conservative default.
+    # Non-binary / prefer-not-to-say: apply FEMALE norms as the conservative
+    # default. Rikli & Jones norms are sex-referenced for physiological reasons;
+    # female norms have the lower threshold and are the safer choice when sex is
+    # not specified. A future intake version may let the user select which norm
+    # set applies.
 
 
 class MedicationClass(str, Enum):
@@ -123,101 +125,219 @@ HYPO_RISK_MEDICATIONS: frozenset[MedicationClass] = frozenset({
 # Reviewed entries are STSBandNorms instances. Unreviewed entries are None.
 # The engine must raise ValueError (not silently fall back) when it encounters None.
 #
-# How boundaries are set for reviewed bands:
-#   level-2/3 boundary — anchored to the Rikli & Jones lower bound of the "normal"
-#     (average) range for that band and sex. This is a cited value.
-#   level-1/2 boundary — a sub-classification within the Rikli & Jones "below average"
-#     range, intended to identify scores where chair assistance is likely needed.
-#     This sub-boundary is implementer judgment and is marked REVIEW on each entry.
+# How boundaries are set:
+#   level-2/3 boundary — lower bound of the Rikli & Jones (1999) normal range for
+#     that band and sex (≈ 25th percentile). This is the cited value.
+#     NOTE: These are the 1999 normative ranges, NOT the 2013 single independence
+#     cut-point. The 2013 paper (Table 7) produces a different construct. Verify
+#     level-2/3 values against the physical copy of Rikli & Jones 1999 before use.
+#   level-1/2 boundary — ceil(lower_bound × 0.6); identifies scores where chair
+#     assistance is likely needed. Scaling rule: physician-set 2026-06-10.
+#     Rationale: fixed offset (−4) is too permissive for the oldest/weakest bands,
+#     which is the opposite of where fall-risk caution is most needed.
 #
-# Reference: Rikli & Jones, "Senior Fitness Test Manual," 2nd ed.,
-#            Human Kinetics, 2013, Table 7 (30-Second Chair Stand normative data).
+# Reference: Rikli RE, Jones CJ. Development and validation of criterion-referenced
+#   clinically relevant fitness standards for maintaining physical independence in
+#   later years. Gerontologist. 2013;53(2):255-267. (Normative ranges: 1999 edition.)
 STS_LEVEL_THRESHOLDS: dict[AgeSexBand, STSBandNorms | None] = {
 
     # 60–64 — primary target cohort
-    # Rikli & Jones 2013 normal range: men 14–19, women 12–17
-    # Below average: men ≤13, women ≤11
+    # Normal range lower bound (Rikli & Jones 1999): men ≥14, women ≥12
     AgeSexBand(60, 64, Sex.MALE): STSBandNorms(
         level_thresholds=(
-            (10, 1),  # REVIEW: clinical value needed — <10 → level 1 (chair-assisted);
-                      # this lower sub-band within below-average (≤13) is implementer
-                      # judgment; no Rikli & Jones value distinguishes it
-            (14, 2),  # anchored: Rikli & Jones 2013 — below-average upper bound for
-                      # men 60–64 is ≤13; score ≥14 = lower bound of normal range
+            (9, 1),   # <9  → level 1 (chair-assisted); ceil(14 × 0.6) = 9
+            (14, 2),  # <14 → level 2; ≥14 = lower bound of normal range
         ),
         top_level=3,
         citation=(
-            "Rikli & Jones 2013 Table 7 (level-2/3 boundary); "
-            "level-1/2 boundary is implementer judgment — REVIEW"
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(14 × 0.6) = 9, physician-set 2026-06-10"
         ),
     ),
     AgeSexBand(60, 64, Sex.FEMALE): STSBandNorms(
         level_thresholds=(
-            (8, 1),   # REVIEW: clinical value needed — <8 → level 1 (chair-assisted);
-                      # this lower sub-band within below-average (≤11) is implementer
-                      # judgment; no Rikli & Jones value distinguishes it
-            (12, 2),  # anchored: Rikli & Jones 2013 — below-average upper bound for
-                      # women 60–64 is ≤11; score ≥12 = lower bound of normal range
+            (8, 1),   # <8  → level 1 (chair-assisted); ceil(12 × 0.6) = 8
+            (12, 2),  # <12 → level 2; ≥12 = lower bound of normal range
         ),
         top_level=3,
         citation=(
-            "Rikli & Jones 2013 Table 7 (level-2/3 boundary); "
-            "level-1/2 boundary is implementer judgment — REVIEW"
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(12 × 0.6) = 8, physician-set 2026-06-10"
         ),
     ),
 
-    # 65–69 — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(65, 69, Sex.MALE): None,
-    AgeSexBand(65, 69, Sex.FEMALE): None,
+    # 65–69 — normal range lower bound: men ≥12, women ≥11
+    AgeSexBand(65, 69, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (8, 1),   # ceil(12 × 0.6) = 8
+            (12, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(12 × 0.6) = 8, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(65, 69, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (7, 1),   # ceil(11 × 0.6) = 7
+            (11, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(11 × 0.6) = 7, physician-set 2026-06-10"
+        ),
+    ),
 
-    # 70–74 — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(70, 74, Sex.MALE): None,
-    AgeSexBand(70, 74, Sex.FEMALE): None,
+    # 70–74 — normal range lower bound: men ≥12, women ≥10
+    AgeSexBand(70, 74, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (8, 1),   # ceil(12 × 0.6) = 8
+            (12, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(12 × 0.6) = 8, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(70, 74, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (6, 1),   # ceil(10 × 0.6) = 6
+            (10, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(10 × 0.6) = 6, physician-set 2026-06-10"
+        ),
+    ),
 
-    # 75–79 — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(75, 79, Sex.MALE): None,
-    AgeSexBand(75, 79, Sex.FEMALE): None,
+    # 75–79 — normal range lower bound: men ≥11, women ≥10
+    AgeSexBand(75, 79, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (7, 1),   # ceil(11 × 0.6) = 7
+            (11, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(11 × 0.6) = 7, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(75, 79, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (6, 1),   # ceil(10 × 0.6) = 6
+            (10, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(10 × 0.6) = 6, physician-set 2026-06-10"
+        ),
+    ),
 
-    # 80–84 — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(80, 84, Sex.MALE): None,
-    AgeSexBand(80, 84, Sex.FEMALE): None,
+    # 80–84 — normal range lower bound: men ≥10, women ≥9
+    AgeSexBand(80, 84, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (6, 1),   # ceil(10 × 0.6) = 6
+            (10, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(10 × 0.6) = 6, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(80, 84, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (6, 1),   # ceil(9 × 0.6) = 6
+            (9, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(9 × 0.6) = 6, physician-set 2026-06-10"
+        ),
+    ),
 
-    # 85–89 — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(85, 89, Sex.MALE): None,
-    AgeSexBand(85, 89, Sex.FEMALE): None,
+    # 85–89 — normal range lower bound: men ≥8, women ≥8
+    AgeSexBand(85, 89, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (5, 1),   # ceil(8 × 0.6) = 5
+            (8, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(8 × 0.6) = 5, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(85, 89, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (5, 1),   # ceil(8 × 0.6) = 5
+            (8, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(8 × 0.6) = 5, physician-set 2026-06-10"
+        ),
+    ),
 
-    # 90+ — REVIEW: clinical value needed — fill from Rikli & Jones 2013 Table 7
-    AgeSexBand(90, 99, Sex.MALE): None,
-    AgeSexBand(90, 99, Sex.FEMALE): None,
+    # 90–99 — normal range lower bound: men ≥7, women ≥6
+    # Note: Rikli & Jones 1999 female 90–94 lower bound is 4 (small-n artifact,
+    # n=88). Floored to 6 by physician decision 2026-06-10 as 4 is clinically
+    # too permissive for fall-risk caution in this band.
+    AgeSexBand(90, 99, Sex.MALE): STSBandNorms(
+        level_thresholds=(
+            (5, 1),   # ceil(7 × 0.6) = 5
+            (7, 2),
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound (level-2/3); "
+            "level-1/2: ceil(7 × 0.6) = 5, physician-set 2026-06-10"
+        ),
+    ),
+    AgeSexBand(90, 99, Sex.FEMALE): STSBandNorms(
+        level_thresholds=(
+            (4, 1),   # ceil(6 × 0.6) = 4
+            (6, 2),   # floored from published 4 to 6 — physician decision 2026-06-10
+        ),
+        top_level=3,
+        citation=(
+            "Rikli & Jones 1999 normative range lower bound floored 4→6 "
+            "(small-n artifact, n=88); physician decision 2026-06-10"
+        ),
+    ),
 }
 
 
-# REVIEW: clinical value needed — these cutoffs are coaching-derived approximations
-# from PRD §7 Step 2 ("e.g." language). They are NOT from a clinical normative
-# reference and have no citation in exercise-science literature.
-# ACSM push-up norms (ACSM's Guidelines for Exercise Testing and Prescription,
-# 11th ed.) apply to full standard push-ups, not to the wall→incline→knee regression
-# ladder used here and cannot be mapped to these thresholds.
-# A physician must confirm these values before clinical use.
+# Push-up entry-level screen. These are capacity thresholds, not normative cut-points.
+# ACSM push-up norms apply to full standard push-ups and cannot map to this
+# wall → incline → knee-pushup regression ladder. No exercise-science citation
+# exists for this specific ladder. Thresholds confirmed by physician 2026-06-10.
 # Each tuple: (rep_count_exclusive_upper_bound, level)
 PUSHUP_LEVEL_THRESHOLDS: list[tuple[int, int]] = [
-    (6, 1),   # REVIEW: clinical value needed — 0–5 → level 1 (wall push-up)
-    (13, 2),  # REVIEW: clinical value needed — 6–12 → level 2 (incline / counter)
+    (6, 1),   # 0–5 reps → level 1 (wall push-up)
+    (13, 2),  # 6–12 reps → level 2 (incline / counter)
 ]
-PUSHUP_DEFAULT_LEVEL: int = 3  # REVIEW: clinical value needed — ≥13 → level 3 (knee → full)
+PUSHUP_DEFAULT_LEVEL: int = 3  # ≥13 reps → level 3 (knee push-up entry)
 
 
 # Contraindication axis 1 — deep knee flexion / compressive load.
-# Basis: excessive patellofemoral compressive force and/or range-of-motion demand
-# that is unsafe for symptomatic knee OA, post-surgical knees, or significant
-# patellofemoral pain syndrome. Triggered by JointFlag.KNEE.
-# REVIEW: clinical value needed — list is implementer-generated.
-# A physician must confirm: (a) which specific knee conditions trigger this axis,
-# (b) the flexion-depth criterion that qualifies as "deep" (e.g., past 90°?),
-# (c) whether deep_lunge requires a depth qualifier or is categorically excluded.
+# Basis: excessive patellofemoral compressive force at flexion past 90°.
+# Triggered by JointFlag.KNEE (symptomatic knee OA, post-surgical knee,
+# significant patellofemoral pain syndrome).
+# Depth criterion: past 90° flexion (physician decision 2026-06-10).
+# "deep_lunge" is depth-qualified, not categorically excluded — it is on this
+# list because the standard execution goes well past 90°. The substitute
+# (box_squat) is the depth-limited variant and is the safe replacement.
 DEEP_KNEE_FLEXION_EXERCISE_IDS: frozenset[str] = frozenset({
     "bodyweight_squat",
-    "deep_lunge",             # REVIEW: "deep" is undefined — depth criterion needed
+    "deep_lunge",
     "bulgarian_split_squat",
     "pistol_squat",
 })
@@ -226,16 +346,12 @@ DEEP_KNEE_FLEXION_EXERCISE_IDS: frozenset[str] = frozenset({
 # Basis: peak ground-reaction forces that stress the lower extremity independent
 # of range of motion. Relevant for osteoporosis, joint replacement, acute bone
 # stress, and poorly controlled hypertension during exercise.
-# REVIEW: clinical value needed — list is implementer-generated.
-# Open design question: should JointFlag.KNEE trigger this axis automatically,
-# or should high-impact be a separate intake flag? Many knee-OA patients also
-# cannot tolerate impact, but the reasons are distinct. Physician decision required.
-# A physician must also confirm: (a) which clinical conditions trigger this axis,
-# (b) what other exercises belong here once library/ is seeded.
+# JointFlag.KNEE auto-triggers this axis (physician decision 2026-06-10): you do
+# not prescribe jumping to a patient who reports knee trouble. Fall risk and low
+# balance score also trigger it independently (see safety.py).
+# Expand this set as plyometric exercises are added to library/.
 HIGH_IMPACT_EXERCISE_IDS: frozenset[str] = frozenset({
     "jump_squat",
-    # REVIEW: clinical value needed — add other plyometric/impact exercises
-    # (box jumps, plyometric lunges, bounding) once library/ is seeded
 })
 
 # Source: CLAUDE.md §Engine rules ("substitutes the box-squat/glute-bridge regression").

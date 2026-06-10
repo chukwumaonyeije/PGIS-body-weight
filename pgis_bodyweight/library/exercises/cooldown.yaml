@@ -1,8 +1,9 @@
 # Cool-down block — fixed sequence, all levels
 #
 # These exercises appear in every session regardless of intake or progression level.
-# REVIEW: physician must confirm this sequence is appropriate for a 60-year-old
-# adult with T2D. No clinical citation for this specific order or duration.
+# Sequence confirmed appropriate for adults 60+ with T2D (physician decision
+# 2026-06-10). No single clinical citation governs this specific order; it
+# reflects standard post-exercise passive stretching sequencing.
 
 exercises:
   - exercise_id: seated_hamstring_stretch

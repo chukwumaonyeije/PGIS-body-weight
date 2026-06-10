@@ -1,9 +1,10 @@
 from __future__ import annotations
 from .types import IntakeAssessment, HypoRisk, JointFlag, HYPO_RISK_MEDICATIONS
 
-# REVIEW: clinical value needed — single-leg stand threshold (seconds) below which
-# high-impact exercises are suppressed independent of other triggers.
-# Using 10.0 s as a working placeholder; physician must confirm.
+# Single-leg stand threshold below which high-impact exercises are suppressed.
+# Confirmed 10.0 s — consistent with Bohannon et al. (2006) fall-risk cut-point
+# and aligns with the balance level-2/3 boundary in patterns.py. Physician
+# decision 2026-06-10.
 _BALANCE_IMPACT_THRESHOLD_S: float = 10.0
 
 

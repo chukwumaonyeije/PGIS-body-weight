@@ -15,9 +15,9 @@
 #   regression_alt : exercise_id of the next-easier substitute (required, non-empty)
 #   progression_alt: exercise_id of the next-harder substitute (required, non-empty)
 #
-# Clinical review status: level-2/3 boundary anchored to Rikli & Jones 2013 (60–64 band).
-# REVIEW: knee_safe track — physician must confirm box_squat and glute_bridge are
-# appropriate substitutes for all knee conditions flagged at intake.
+# Level-2/3 boundary anchored to Rikli & Jones 1999 normative range lower bound.
+# knee_safe track: box_squat and glute_bridge confirmed as appropriate knee-safe
+# substitutes for the target population (physician decision 2026-06-10).
 
 standard:
   - level: 1

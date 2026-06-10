@@ -14,9 +14,12 @@ from pgis_bodyweight.api.schemas import (
     SessionLogResponse,
     SessionOut,
 )
+from pgis_bodyweight.engine.autoregulate import autoregulate
 from pgis_bodyweight.engine.generator import generate_mesocycle
+from pgis_bodyweight.engine.types import MovementPattern
+from pgis_bodyweight.library import build_exercise_pattern_map
 from pgis_bodyweight.models.db import get_db
-from pgis_bodyweight.models.tables import GeneratedProgram, IntakeSubmission, SessionLog, User
+from pgis_bodyweight.models.tables import GeneratedProgram, IntakeSubmission, ProgressionState, SessionLog, User
 
 router = APIRouter(prefix="/v1/programs", tags=["programs"])
 
@@ -207,9 +210,54 @@ def log_session(
     db.commit()
     db.refresh(log)
 
+    level_changes: dict[str, int] = {}
+    if body.per_exercise_rpe:
+        level_changes = _apply_autoregulation(body.user_id, body.per_exercise_rpe, db)
+
     return SessionLogResponse(
         log_id=log.id,
         program_id=program_id,
         week=target_week,
         day_in_week=target_day,
+        level_changes=level_changes,
     )
+
+
+def _apply_autoregulation(
+    user_id: str,
+    per_exercise_rpe: dict[str, float],
+    db: Session,
+) -> dict[str, int]:
+    """
+    Load current ProgressionState for the user, run autoregulate(), persist changes.
+    Returns a dict of pattern → new_level for patterns that changed.
+    """
+    existing: dict[MovementPattern, ProgressionState] = {
+        MovementPattern(row.pattern): row
+        for row in db.query(ProgressionState).filter(ProgressionState.user_id == user_id).all()
+    }
+    current_levels: dict[MovementPattern, int] = {
+        p: (existing[p].current_level if p in existing else 1)
+        for p in MovementPattern
+    }
+
+    exercise_pattern_map = build_exercise_pattern_map()
+    new_levels = autoregulate(per_exercise_rpe, current_levels, exercise_pattern_map)
+
+    changes: dict[str, int] = {}
+    for pattern, new_level in new_levels.items():
+        if new_level != current_levels[pattern]:
+            changes[pattern.value] = new_level
+            if pattern in existing:
+                existing[pattern].current_level = new_level
+            else:
+                db.add(ProgressionState(
+                    user_id=user_id,
+                    pattern=pattern.value,
+                    current_level=new_level,
+                ))
+
+    if changes:
+        db.commit()
+
+    return changes

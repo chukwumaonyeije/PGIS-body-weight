@@ -2,8 +2,9 @@
 #
 # These exercises appear in every session regardless of intake or progression level.
 # They are not part of a progression ladder; level is always 1.
-# REVIEW: physician must confirm this sequence is appropriate for a 60-year-old
-# adult with T2D. No clinical citation for this specific order or duration.
+# Sequence confirmed appropriate for adults 60+ with T2D (physician decision
+# 2026-06-10). No single clinical citation governs this specific order; it
+# reflects standard low-intensity mobility sequencing.
 
 exercises:
   - exercise_id: march_in_place

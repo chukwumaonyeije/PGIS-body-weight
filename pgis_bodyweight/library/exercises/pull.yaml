@@ -1,9 +1,9 @@
-# Pull pattern — progression ladder
+# Pull pattern — progression ladders
 #
-# Single track (no joint-flag variant at Phase 1).
-# REVIEW: physician must confirm whether JointFlag.SHOULDER triggers a
-# modified track (e.g. exclude inverted_row; use only band-resisted rows
-# in a pain-free range).
+# Two tracks (physician decision 2026-06-10):
+#   levels         — standard track
+#   shoulder_safe  — JointFlag.SHOULDER; band-only throughout; excludes
+#                    inverted_row and other loaded body-weight rows
 
 levels:
   - level: 1
@@ -32,3 +32,31 @@ levels:
     target_rpe: 7.0
     regression_alt: door_row
     progression_alt: inverted_row
+
+shoulder_safe:
+  - level: 1
+    exercise_id: band_row
+    sets: 2
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: seated_row_isometric
+    progression_alt: band_high_row
+
+  - level: 2
+    exercise_id: band_high_row
+    sets: 2
+    reps_or_time: "12 reps"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: band_row
+    progression_alt: band_face_pull
+
+  - level: 3
+    exercise_id: band_face_pull
+    sets: 3
+    reps_or_time: "15 reps"
+    rest_s: 60
+    target_rpe: 6.5
+    regression_alt: band_high_row
+    progression_alt: band_pull_apart

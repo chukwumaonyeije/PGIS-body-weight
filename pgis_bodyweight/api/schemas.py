@@ -7,7 +7,7 @@ so they can be built directly from engine dataclass instances.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from pgis_bodyweight.engine.types import (
     EquipmentItem,
@@ -142,3 +142,23 @@ class SessionLogResponse(BaseModel):
     program_id: str
     week: int
     day_in_week: int
+    level_changes: dict[str, int] = {}  # pattern → new level; empty when no RPE submitted
+
+
+class CoachingResponse(BaseModel):
+    coaching_text: str | None
+
+
+class GlucoseEntryRequest(BaseModel):
+    user_id: str
+    value_mgdl: float = Field(..., gt=0)
+    recorded_at: str | None = None   # ISO 8601; defaults to server time when omitted
+    session_log_id: str | None = None
+    notes: str | None = None
+
+
+class GlucoseEntryResponse(BaseModel):
+    reading_id: str
+    user_id: str
+    value_mgdl: float
+    recorded_at: str

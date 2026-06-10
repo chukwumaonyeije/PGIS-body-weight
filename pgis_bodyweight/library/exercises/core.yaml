@@ -1,8 +1,9 @@
-# Core pattern — progression ladder
+# Core pattern — progression ladders
 #
-# Single track (no joint-flag variant at Phase 1).
-# REVIEW: physician must confirm whether JointFlag.LOWER_BACK triggers a
-# modified track (e.g. avoid full plank; prefer dead_bug and supine variants only).
+# Two tracks:
+#   levels           — standard track; used when JointFlag.LOWER_BACK is not set
+#   lower_back_safe  — JointFlag.LOWER_BACK; restricts to dead_bug and bird_dog;
+#                      defers full plank (physician decision 2026-06-10)
 
 levels:
   - level: 1
@@ -31,3 +32,31 @@ levels:
     target_rpe: 7.0
     regression_alt: bird_dog
     progression_alt: side_plank
+
+lower_back_safe:
+  - level: 1
+    exercise_id: dead_bug
+    sets: 2
+    reps_or_time: "5 reps per side"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: supine_heel_slide
+    progression_alt: bird_dog
+
+  - level: 2
+    exercise_id: bird_dog
+    sets: 2
+    reps_or_time: "8 reps per side"
+    rest_s: 60
+    target_rpe: 6.0
+    regression_alt: dead_bug
+    progression_alt: pallof_press_band
+
+  - level: 3
+    exercise_id: bird_dog
+    sets: 3
+    reps_or_time: "10 reps per side"
+    rest_s: 60
+    target_rpe: 6.5
+    regression_alt: dead_bug
+    progression_alt: pallof_press_band

@@ -1,8 +1,9 @@
-# Hinge pattern — progression ladder
+# Hinge pattern — progression ladders
 #
-# Single track (no joint-flag variant needed for hinge at Phase 1).
-# REVIEW: physician must confirm whether JointFlag.LOWER_BACK should trigger
-# a separate hinge track (e.g. exclude single-leg deadlift variants).
+# Two tracks:
+#   levels           — standard track; used when JointFlag.LOWER_BACK is not set
+#   lower_back_safe  — JointFlag.LOWER_BACK; excludes single-leg deadlift variants;
+#                      keeps bilateral hinge only (physician decision 2026-06-10)
 
 levels:
   - level: 1
@@ -31,3 +32,31 @@ levels:
     target_rpe: 7.0
     regression_alt: romanian_deadlift_band
     progression_alt: single_leg_deadlift
+
+lower_back_safe:
+  - level: 1
+    exercise_id: hip_hinge_bodyweight
+    sets: 2
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 5.0
+    regression_alt: seated_good_morning
+    progression_alt: romanian_deadlift_band
+
+  - level: 2
+    exercise_id: romanian_deadlift_band
+    sets: 3
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 6.5
+    regression_alt: hip_hinge_bodyweight
+    progression_alt: good_morning_band
+
+  - level: 3
+    exercise_id: good_morning_band
+    sets: 3
+    reps_or_time: "10 reps"
+    rest_s: 60
+    target_rpe: 7.0
+    regression_alt: romanian_deadlift_band
+    progression_alt: sumo_deadlift_band
