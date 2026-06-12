@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToken, getUserId } from "@/lib/auth";
 import { getProgram, getCoaching, type Session, type ExerciseInstance } from "@/lib/api";
+import SafetyNotice from "@/components/SafetyNotice";
 
 function ExerciseCard({ ex }: { ex: ExerciseInstance }) {
   const [showAlts, setShowAlts] = useState(false);
@@ -39,7 +40,7 @@ function ExerciseCard({ ex }: { ex: ExerciseInstance }) {
   );
 }
 
-export default function SessionPage() {
+function SessionPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const programId = params.get("pid");
@@ -158,7 +159,17 @@ export default function SessionPage() {
         {!session && (
           <p className="text-gray-400 text-sm text-center py-8">Loading session...</p>
         )}
+
+        <SafetyNotice compact />
       </main>
     </div>
+  );
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense fallback={null}>
+      <SessionPageContent />
+    </Suspense>
   );
 }

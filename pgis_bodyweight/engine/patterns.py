@@ -3,6 +3,7 @@ from .types import (
     IntakeAssessment,
     MovementPattern,
     AgeSexBand,
+    Sex,
     STS_LEVEL_THRESHOLDS,
     PUSHUP_LEVEL_THRESHOLDS,
     PUSHUP_DEFAULT_LEVEL,
@@ -48,9 +49,10 @@ def _squat_level(intake: IntakeAssessment) -> int:
 
 def _age_sex_band(intake: IntakeAssessment) -> AgeSexBand:
     age = intake.age
+    norm_sex = Sex.FEMALE if intake.sex == Sex.NON_BINARY else intake.sex
     for age_min, age_max in [(60,64),(65,69),(70,74),(75,79),(80,84),(85,89),(90,99)]:
         if age_min <= age <= age_max:
-            return AgeSexBand(age_min, age_max, intake.sex)
+            return AgeSexBand(age_min, age_max, norm_sex)
     raise ValueError(f"Age {age} is outside the supported range (60–99).")
 
 

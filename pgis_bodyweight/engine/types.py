@@ -9,11 +9,12 @@ from typing import NamedTuple
 class Sex(str, Enum):
     MALE = "male"
     FEMALE = "female"
-    # Non-binary / prefer-not-to-say: apply FEMALE norms as the conservative
-    # default. Rikli & Jones norms are sex-referenced for physiological reasons;
-    # female norms have the lower threshold and are the safer choice when sex is
-    # not specified. A future intake version may let the user select which norm
-    # set applies.
+    NON_BINARY = "non_binary"
+    # Non-binary / prefer-not-to-say: apply FEMALE norms in patterns.py as the
+    # conservative default. Rikli & Jones norms are sex-referenced for
+    # physiological reasons; female norms have the lower threshold and are the
+    # safer choice when sex is not specified. A future intake version may let
+    # the user select which norm set applies.
 
 
 class MedicationClass(str, Enum):

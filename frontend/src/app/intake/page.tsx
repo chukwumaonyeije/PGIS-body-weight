@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { submitIntake, generateProgram } from "@/lib/api";
 import { getToken, getUserId } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import SafetyNotice from "@/components/SafetyNotice";
 
 const schema = z.object({
   age: z.coerce.number().int().min(60).max(99),
@@ -135,6 +136,9 @@ export default function IntakePage() {
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-sm border p-8">
+          <div className="mb-6">
+            <SafetyNotice />
+          </div>
 
           {/* Progress bar */}
           <div className="flex gap-2 mb-8">

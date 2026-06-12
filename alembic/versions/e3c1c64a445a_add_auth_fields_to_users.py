@@ -19,12 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('users', sa.Column('email', sa.String(length=255), nullable=True))
-    op.add_column('users', sa.Column('password_hash', sa.String(length=255), nullable=True))
-    op.create_unique_constraint('uq_users_email', 'users', ['email'])
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.add_column(sa.Column("email", sa.String(length=255), nullable=True))
+        batch_op.add_column(sa.Column("password_hash", sa.String(length=255), nullable=True))
+        batch_op.create_unique_constraint("uq_users_email", ["email"])
 
 
 def downgrade() -> None:
-    op.drop_constraint('uq_users_email', 'users', type_='unique')
-    op.drop_column('users', 'password_hash')
-    op.drop_column('users', 'email')
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.drop_constraint("uq_users_email", type_="unique")
+        batch_op.drop_column("password_hash")
+        batch_op.drop_column("email")

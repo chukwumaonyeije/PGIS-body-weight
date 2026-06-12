@@ -43,7 +43,7 @@ export function login(email: string, password: string) {
 
 export interface IntakePayload {
   age: number;
-  sex: string;
+  sex: "male" | "female" | "non_binary";
   parq_flags: string[];
   medication_class: string;
   joint_flags: string[];

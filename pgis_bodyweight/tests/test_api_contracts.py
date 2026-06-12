@@ -76,6 +76,11 @@ class TestIntakeEndpoint:
         r = client.post("/v1/intake", json={**CLEAN_INTAKE, "sex": "unknown"})
         assert r.status_code == 422
 
+    def test_non_binary_sex_is_accepted(self):
+        r = client.post("/v1/intake", json={**CLEAN_INTAKE, "sex": "non_binary"})
+        assert r.status_code == 200
+        assert r.json()["clearance_required"] is False
+
     def test_invalid_medication_class_returns_422(self):
         r = client.post("/v1/intake", json={**CLEAN_INTAKE, "medication_class": "aspirin"})
         assert r.status_code == 422
@@ -158,6 +163,13 @@ class TestGenerateEndpoint:
     def test_invalid_sex_returns_422(self):
         r = client.post("/v1/programs/generate", json={**CLEAN_INTAKE, "sex": "unknown"})
         assert r.status_code == 422
+
+    def test_non_binary_sex_generates_program(self):
+        r = client.post("/v1/programs/generate", json={**CLEAN_INTAKE, "sex": "non_binary"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["clearance_required"] is False
+        assert body["program"] is not None
 
     def test_age_outside_supported_range_returns_422(self):
         """Ages below 60 are not supported and must return 422."""

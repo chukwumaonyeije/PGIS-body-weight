@@ -9,6 +9,7 @@ import Link from "next/link";
 import { login, register } from "@/lib/api";
 import { saveAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import SafetyNotice from "@/components/SafetyNotice";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -106,6 +107,10 @@ export default function AuthForm({ mode }: Props) {
             <>Have an account? <Link href="/login" className="text-brand-600 hover:underline">Sign in</Link></>
           )}
         </p>
+
+        <div className="mt-6">
+          <SafetyNotice compact />
+        </div>
       </div>
     </div>
   );

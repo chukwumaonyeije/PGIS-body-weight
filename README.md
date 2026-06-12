@@ -1,53 +1,199 @@
 # PGIS Body Weight
-### Calisthenics Training for Health-Conscious Physicians and Mature Athletes
 
-A personalized landing page for a 12-week calisthenics program designed for a 60-year-old physician managing type 2 diabetes through the **Mastering Diabetes** lifestyle — while training for a **Thanksgiving Half Marathon**.
+Glucose-aware bodyweight training for the PGIS platform.
 
----
+PGIS Body Weight is a full-stack MVP that turns a user's intake answers into a personalized 4-week bodyweight training program. It combines a deterministic exercise-programming engine, safety gates, session-level programming, basic account creation, manual glucose logging, and a Next.js frontend.
 
-## About the Program
+## Current Status
 
-PGIS Body Weight is built around the intersection of clinical knowledge, metabolic health, and sustainable athletic performance. The program delivers:
+The app currently works locally end-to-end:
 
-- **Muscle Support** — bodyweight strength movements that build lean muscle, improve glucose sensitivity, and support metabolic health
-- **Injury Prevention** — balanced progressions, joint-friendly exercise selection, and active recovery strategies
-- **Half Marathon Preparation** — calisthenics as cross-training to strengthen core stability, posture, and endurance alongside a running plan
-
-Equipment needed: resistance bands, a chair, and bodyweight only.
-
----
-
-## 12-Week Program Structure
-
-| Phase | Weeks | Focus |
-|-------|-------|-------|
-| Foundation | 1–4 | Gentle strength progressions and improved movement quality |
-| Build | 5–8 | Increased intensity, stability drills, and functional conditioning |
-| Race Ready | 9–12 | Balanced strength, dynamic recovery, and confidence before Thanksgiving |
-
----
-
-## Who This Is For
-
-- Physicians and medical professionals with demanding schedules
-- Adults 50+ seeking safe, progressive strength training
-- People managing type 2 diabetes through lifestyle (Mastering Diabetes protocol)
-- Runners seeking complementary cross-training before a half marathon
-
----
-
-## Project Structure
-
-```
-PGIS-Body-Weight/
-├── index.html   # Landing page markup
-└── styles.css   # Responsive styles (Inter font, navy/amber palette)
+```text
+Register -> Log in -> 4-step intake -> 4-week program -> individual session details
 ```
 
-The site is a single-page static site — no build tools or dependencies required. Open `index.html` directly in a browser or serve it with any static host (GitHub Pages, Netlify, etc.).
+This repository is in repo-hardening mode before public deployment. The next priorities are reproducible setup, verified tests/builds, frontend/backend contract alignment, and real JWT enforcement for user-specific routes.
 
----
+## Architecture
 
-## Contact
+| Layer | Purpose | Location | Stack |
+|---|---|---|---|
+| Frontend | User-facing auth, intake, program, and session screens | `frontend/` | Next.js 14, React, Tailwind |
+| Backend API | HTTP routes, auth, persistence, glucose logging, coaching endpoint | `pgis_bodyweight/api/` | FastAPI |
+| Training engine | Deterministic program generation, safety rules, autoregulation | `pgis_bodyweight/engine/` | Python dataclasses and pure functions |
+| Exercise library | Movement ladders and fixed warmup/cooldown blocks | `pgis_bodyweight/library/` | YAML |
+| Data model | Users, intakes, generated programs, session logs, progression states, glucose readings | `pgis_bodyweight/models/` | SQLAlchemy |
+| Migrations | Production schema changes | `alembic/` | Alembic |
+| Tests | API contracts, persistence, glucose, coaching, safety, autoregulation | `pgis_bodyweight/tests/` | pytest |
 
-For program inquiries: [info@pgisbodyweight.com](mailto:info@pgisbodyweight.com?subject=Thanksgiving%20Half%20Marathon%20Calisthenics%20Program)
+The canonical backend ASGI app is:
+
+```text
+pgis_bodyweight.api.app:app
+```
+
+For a fuller developer map, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Local Development
+
+### Backend
+
+From the repository root:
+
+```bash
+uv sync --extra test
+uv run alembic upgrade head
+uv run uvicorn pgis_bodyweight.api.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```text
+http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+### Frontend
+
+From `frontend/`:
+
+```bash
+npm install
+npm run dev
+```
+
+The frontend defaults to:
+
+```text
+http://localhost:3000
+```
+
+Set `NEXT_PUBLIC_API_URL` if the backend is not running on `http://localhost:8000`.
+
+## Environment Variables
+
+### Backend
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `DATABASE_URL` | Production | PostgreSQL connection string. Defaults to local SQLite when omitted. |
+| `JWT_SECRET` | Production | Secret used to sign auth tokens. Required when `ENVIRONMENT=production`, `APP_ENV=prod`, or `RAILWAY_ENVIRONMENT` is set. |
+| `ALLOWED_ORIGINS` | Production | Comma-separated frontend origins allowed by CORS. Defaults to local Next.js origins. |
+| `ANTHROPIC_API_KEY` | Optional | Enables AI-generated session coaching text. The app should still work without it. |
+
+Local development uses a fallback JWT secret when no production environment marker is present. Production startup fails if `JWT_SECRET` is missing or set to the development fallback.
+
+### Frontend
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `NEXT_PUBLIC_API_URL` | Deployment | Public backend API URL, for example the Railway backend URL. |
+
+Example:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+## Testing
+
+Backend:
+
+```bash
+uv sync --extra test
+uv run pytest
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Note: backend dependency setup has been verified with `uv sync --extra test` and `uv run pytest`. Frontend dependency verification is still part of repo hardening.
+
+## Deployment
+
+The intended deployment shape is:
+
+| Component | Host |
+|---|---|
+| Backend | Railway |
+| Database | Railway PostgreSQL |
+| Frontend | Vercel |
+
+### Railway Backend
+
+1. Connect the GitHub repository.
+2. Add a Railway PostgreSQL plugin.
+3. Set `JWT_SECRET`.
+4. Set `ALLOWED_ORIGINS` after the Vercel URL is known.
+5. Deploy with:
+
+```text
+uvicorn pgis_bodyweight.api.app:app --host 0.0.0.0 --port $PORT
+```
+
+6. Confirm `/health` returns `{"status":"ok"}`.
+
+### Vercel Frontend
+
+1. Import the GitHub repository.
+2. Set the Vercel root directory to `frontend`.
+3. Set `NEXT_PUBLIC_API_URL` to the Railway backend URL.
+4. Deploy.
+5. Add the Vercel URL to Railway `ALLOWED_ORIGINS`.
+
+### Smoke Test
+
+Use a private/incognito browser window:
+
+1. Register a new account.
+2. Complete the intake.
+3. Generate a program.
+4. Open a session.
+5. Log out and log back in.
+6. Confirm the program remains accessible.
+
+## Known Limitations
+
+- User-specific backend routes currently need stronger JWT enforcement before public use.
+- The frontend/backend schema should be checked for contract mismatches before deployment.
+- Error messages may still expose raw API details instead of friendly copy.
+- Password reset and email verification are not yet implemented.
+- Session completion UI is still an MVP polish item.
+- AI coaching requires `ANTHROPIC_API_KEY`; without it, coaching should fail gracefully.
+
+## Clinical and Safety Note
+
+PGIS Body Weight is a medically aware fitness MVP, not a substitute for medical care. It is intended to support safe, progressive exercise planning, but users should follow clinician guidance for diabetes management, exercise restrictions, glucose monitoring, fall risk, and cardiovascular symptoms.
+
+The app includes PAR-Q-style safety gating and exercise substitutions, but clinical thresholds and contraindication rules should remain physician-reviewed and auditable before broad public use.
+
+The frontend displays a health and privacy notice in the auth, intake, program, and session flows. Keep that notice current as the app begins accepting more sensitive data.
+
+## Repository Map
+
+```text
+.
+├── alembic/                         # database migrations
+├── frontend/                        # Next.js app
+├── pgis_bodyweight/
+│   ├── api/                         # FastAPI app, schemas, routers
+│   ├── coaching/                    # optional AI narration layer
+│   ├── engine/                      # deterministic training logic
+│   ├── library/                     # exercise YAML library
+│   ├── models/                      # SQLAlchemy models and DB setup
+│   └── tests/                       # pytest suite
+├── main.py                          # local uvicorn runner
+├── pyproject.toml                   # Python project metadata
+├── railway.toml                     # Railway deployment config
+└── NEXT_STEPS.md                    # current project roadmap
+```

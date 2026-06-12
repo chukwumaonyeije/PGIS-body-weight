@@ -10,6 +10,7 @@ from pgis_bodyweight.api.schemas import (
     IntakeSubmitRequest,
     IntakeSubmitResponse,
 )
+from pgis_bodyweight.api.security import get_current_user_id, require_matching_user
 from pgis_bodyweight.engine.safety import check_parq, resolve_hypo_risk
 from pgis_bodyweight.models.db import get_db
 from pgis_bodyweight.models.tables import IntakeSubmission, User
@@ -41,12 +42,14 @@ def assess_intake(body: IntakeRequest) -> IntakeAssessmentResponse:
 @router.post("/submit", response_model=IntakeSubmitResponse, status_code=201)
 def submit_intake(
     body: IntakeSubmitRequest,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> IntakeSubmitResponse:
     """
     Stateful intake submission — persists against user_id, returns intake_id.
     Pass intake_id to POST /v1/programs/generate to generate a program.
     """
+    require_matching_user(body.user_id, current_user_id)
     user = db.get(User, body.user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="user not found")

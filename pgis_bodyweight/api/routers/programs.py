@@ -14,6 +14,7 @@ from pgis_bodyweight.api.schemas import (
     SessionLogResponse,
     SessionOut,
 )
+from pgis_bodyweight.api.security import get_current_user_id, require_matching_user
 from pgis_bodyweight.engine.autoregulate import autoregulate
 from pgis_bodyweight.engine.generator import generate_mesocycle
 from pgis_bodyweight.engine.types import MovementPattern
@@ -51,12 +52,14 @@ def generate_program(body: IntakeRequest) -> GenerationResponse:
 @router.post("/generate-from-intake", response_model=GenerateFromIntakeResponse, status_code=201)
 def generate_from_intake(
     body: GenerateFromIntakeRequest,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> GenerateFromIntakeResponse:
     """
     Stateful generation — loads a persisted intake by intake_id, generates a
     mesocycle, and stores the result. Returns program_id for session queries.
     """
+    require_matching_user(body.user_id, current_user_id)
     user = db.get(User, body.user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="user not found")
@@ -103,8 +106,13 @@ def generate_from_intake(
 
 
 @router.get("/current", response_model=GenerateFromIntakeResponse)
-def get_current_program(user_id: str, db: Session = Depends(get_db)) -> GenerateFromIntakeResponse:
+def get_current_program(
+    user_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> GenerateFromIntakeResponse:
     """Return the most recently generated program for a user."""
+    require_matching_user(user_id, current_user_id)
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="user not found")
@@ -131,9 +139,11 @@ def get_current_program(user_id: str, db: Session = Depends(get_db)) -> Generate
 def get_program(
     program_id: str,
     user_id: str,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> GenerateFromIntakeResponse:
     """Fetch a stored program by ID."""
+    require_matching_user(user_id, current_user_id)
     record = db.get(GeneratedProgram, program_id)
     if record is None or record.user_id != user_id:
         raise HTTPException(status_code=404, detail="program not found")
@@ -150,6 +160,7 @@ def get_program(
 def get_next_session(
     program_id: str,
     user_id: str,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> SessionOut:
     """
@@ -158,6 +169,7 @@ def get_next_session(
     Sessions are served from the stored program_json. A session is 'done' when
     a SessionLog row exists for that (program_id, week, day_in_week).
     """
+    require_matching_user(user_id, current_user_id)
     record = db.get(GeneratedProgram, program_id)
     if record is None or record.user_id != user_id:
         raise HTTPException(status_code=404, detail="program not found")
@@ -182,9 +194,11 @@ def get_next_session(
 def log_session(
     program_id: str,
     body: SessionLogRequest,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> SessionLogResponse:
     """Log completion of a session. week and day are inferred from the next uncompleted slot."""
+    require_matching_user(body.user_id, current_user_id)
     record = db.get(GeneratedProgram, program_id)
     if record is None or record.user_id != body.user_id:
         raise HTTPException(status_code=404, detail="program not found")

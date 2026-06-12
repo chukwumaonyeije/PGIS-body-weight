@@ -7,9 +7,9 @@ errors, or is slow — not the prose itself. No real Anthropic API calls.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -29,21 +29,26 @@ CLEAN_INTAKE = {
 }
 
 
-def _create_user(client: TestClient) -> str:
-    r = client.post("/v1/users")
+def _register_user(client: TestClient) -> tuple[str, dict[str, str]]:
+    r = client.post(
+        "/v1/auth/register",
+        json={"email": f"coach-{uuid.uuid4()}@example.com", "password": "Password123!"},
+    )
     assert r.status_code == 201
-    return r.json()["user_id"]
+    body = r.json()
+    return body["user_id"], {"Authorization": f"Bearer {body['token']}"}
 
 
-def _create_program(client: TestClient, user_id: str) -> tuple[str, int, int]:
+def _create_program(client: TestClient, user_id: str, headers: dict[str, str]) -> tuple[str, int, int]:
     """Returns (program_id, first_week_number, first_day)."""
-    r = client.post("/v1/intake/submit", json={"user_id": user_id, "intake": CLEAN_INTAKE})
+    r = client.post("/v1/intake/submit", json={"user_id": user_id, "intake": CLEAN_INTAKE}, headers=headers)
     assert r.status_code == 201
     intake_id = r.json()["intake_id"]
 
     r = client.post(
         "/v1/programs/generate-from-intake",
         json={"user_id": user_id, "intake_id": intake_id},
+        headers=headers,
     )
     assert r.status_code in (200, 201)
     program_id = r.json()["program_id"]
@@ -57,8 +62,8 @@ def _create_program(client: TestClient, user_id: str) -> tuple[str, int, int]:
 
 class TestCoachingEndpoint:
     def test_returns_200_with_prose(self, client):
-        user_id = _create_user(client)
-        program_id, week, day = _create_program(client, user_id)
+        user_id, headers = _register_user(client)
+        program_id, week, day = _create_program(client, user_id, headers)
 
         with patch(
             "pgis_bodyweight.api.routers.coaching.generate_coaching",
@@ -68,14 +73,15 @@ class TestCoachingEndpoint:
             r = client.get(
                 f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
                 params={"user_id": user_id},
+                headers=headers,
             )
         assert r.status_code == 200
         assert r.json()["coaching_text"] == "Start with the glute bridge. Take your time."
 
     def test_returns_200_when_coaching_unavailable(self, client):
         """Program is fully functional when the coaching layer returns nothing."""
-        user_id = _create_user(client)
-        program_id, week, day = _create_program(client, user_id)
+        user_id, headers = _register_user(client)
+        program_id, week, day = _create_program(client, user_id, headers)
 
         with patch(
             "pgis_bodyweight.api.routers.coaching.generate_coaching",
@@ -85,13 +91,14 @@ class TestCoachingEndpoint:
             r = client.get(
                 f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
                 params={"user_id": user_id},
+                headers=headers,
             )
         assert r.status_code == 200
         assert r.json()["coaching_text"] is None
 
     def test_response_has_coaching_text_key(self, client):
-        user_id = _create_user(client)
-        program_id, week, day = _create_program(client, user_id)
+        user_id, headers = _register_user(client)
+        program_id, week, day = _create_program(client, user_id, headers)
 
         with patch(
             "pgis_bodyweight.api.routers.coaching.generate_coaching",
@@ -101,35 +108,56 @@ class TestCoachingEndpoint:
             r = client.get(
                 f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
                 params={"user_id": user_id},
+                headers=headers,
             )
         assert "coaching_text" in r.json()
 
+    def test_requires_token(self, client):
+        user_id, headers = _register_user(client)
+        program_id, week, day = _create_program(client, user_id, headers)
+        r = client.get(
+            f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
+            params={"user_id": user_id},
+        )
+        assert r.status_code == 401
+
     def test_unknown_program_returns_404(self, client):
+        user_id, headers = _register_user(client)
         r = client.get(
             "/v1/programs/00000000-0000-0000-0000-000000000000/sessions/1/1/coaching",
-            params={"user_id": "00000000-0000-0000-0000-000000000001"},
+            params={"user_id": user_id},
+            headers=headers,
         )
         assert r.status_code == 404
 
-    def test_wrong_user_id_returns_404(self, client):
+    def test_wrong_user_id_returns_403(self, client):
         """A program owned by one user is not accessible to another."""
-        user_id = _create_user(client)
-        program_id, week, day = _create_program(client, user_id)
-        other_user = _create_user(client)
+        user_id, headers = _register_user(client)
+        program_id, week, day = _create_program(client, user_id, headers)
+        other_user, other_headers = _register_user(client)
 
         r = client.get(
             f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
             params={"user_id": other_user},
+            headers=other_headers,
         )
         assert r.status_code == 404
 
+        r = client.get(
+            f"/v1/programs/{program_id}/sessions/{week}/{day}/coaching",
+            params={"user_id": user_id},
+            headers=other_headers,
+        )
+        assert r.status_code == 403
+
     def test_unknown_session_returns_404(self, client):
-        user_id = _create_user(client)
-        program_id, _, _ = _create_program(client, user_id)
+        user_id, headers = _register_user(client)
+        program_id, _, _ = _create_program(client, user_id, headers)
 
         r = client.get(
             f"/v1/programs/{program_id}/sessions/99/99/coaching",
             params={"user_id": user_id},
+            headers=headers,
         )
         assert r.status_code == 404
 

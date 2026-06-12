@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToken, getUserId, clearAuth } from "@/lib/auth";
 import { getProgram, type Program } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import SafetyNotice from "@/components/SafetyNotice";
 
 function ExerciseBadge({ id }: { id: string }) {
   return (
@@ -15,7 +16,7 @@ function ExerciseBadge({ id }: { id: string }) {
   );
 }
 
-export default function ProgramPage() {
+function ProgramPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const programId = params.get("id");
@@ -174,9 +175,21 @@ export default function ProgramPage() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-8">
+              <SafetyNotice compact />
+            </div>
           </>
         )}
       </main>
     </div>
+  );
+}
+
+export default function ProgramPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProgramPageContent />
+    </Suspense>
   );
 }

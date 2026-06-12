@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from pgis_bodyweight.api.schemas import CoachingResponse, ProgramOut, SessionOut
+from pgis_bodyweight.api.security import get_current_user_id, require_matching_user
 from pgis_bodyweight.coaching import generate_coaching
 from pgis_bodyweight.models.db import get_db
 from pgis_bodyweight.models.tables import GeneratedProgram
@@ -26,8 +27,10 @@ async def get_session_coaching(
     week: int,
     day: int,
     user_id: str,
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> CoachingResponse:
+    require_matching_user(user_id, current_user_id)
     record = db.get(GeneratedProgram, program_id)
     if record is None or record.user_id != user_id:
         raise HTTPException(status_code=404, detail="program not found")
