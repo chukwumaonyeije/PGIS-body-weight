@@ -127,6 +127,25 @@ def get_current_program(user_id: str, db: Session = Depends(get_db)) -> Generate
     )
 
 
+@router.get("/{program_id}", response_model=GenerateFromIntakeResponse)
+def get_program(
+    program_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> GenerateFromIntakeResponse:
+    """Fetch a stored program by ID."""
+    record = db.get(GeneratedProgram, program_id)
+    if record is None or record.user_id != user_id:
+        raise HTTPException(status_code=404, detail="program not found")
+    program_out = ProgramOut.model_validate(record.program_json)
+    return GenerateFromIntakeResponse(
+        program_id=record.id,
+        clearance_required=False,
+        clearance_reason=None,
+        program=program_out,
+    )
+
+
 @router.get("/{program_id}/sessions/next", response_model=SessionOut)
 def get_next_session(
     program_id: str,

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from pgis_bodyweight.api.routers import coaching, glucose, intake, programs, users
+from pgis_bodyweight.api.routers import auth, coaching, glucose, intake, programs, users
 from pgis_bodyweight.models.db import DATABASE_URL, create_tables
+
+_ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000",
+).split(",")
 
 
 @asynccontextmanager
@@ -28,6 +35,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(intake.router)
 app.include_router(programs.router)
