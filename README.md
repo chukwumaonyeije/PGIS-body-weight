@@ -6,19 +6,19 @@ PGIS Body Weight is a full-stack MVP that turns a user's intake answers into a p
 
 ## Current Status
 
-The app currently works locally end-to-end:
+The app works locally end-to-end:
 
 ```text
 Register -> Log in -> 4-step intake -> 4-week program -> individual session details
 ```
 
-This repository is in repo-hardening mode before public deployment. The next priorities are reproducible setup, verified tests/builds, frontend/backend contract alignment, and real JWT enforcement for user-specific routes.
+As of 2026-06-12, repo hardening, auth/privacy hardening, dependency/security upgrades, and local smoke testing are complete. The next phase is deployment: Railway backend, Vercel frontend, CORS connection, and public smoke test.
 
 ## Architecture
 
 | Layer | Purpose | Location | Stack |
 |---|---|---|---|
-| Frontend | User-facing auth, intake, program, and session screens | `frontend/` | Next.js 14, React, Tailwind |
+| Frontend | User-facing auth, intake, program, and session screens | `frontend/` | Next.js 15, React, Tailwind |
 | Backend API | HTTP routes, auth, persistence, glucose logging, coaching endpoint | `pgis_bodyweight/api/` | FastAPI |
 | Training engine | Deterministic program generation, safety rules, autoregulation | `pgis_bodyweight/engine/` | Python dataclasses and pure functions |
 | Exercise library | Movement ladders and fixed warmup/cooldown blocks | `pgis_bodyweight/library/` | YAML |
@@ -117,7 +117,13 @@ npm run lint
 npm run build
 ```
 
-Note: backend dependency setup has been verified with `uv sync --extra test` and `uv run pytest`. Frontend dependency verification is still part of repo hardening.
+Verified on 2026-06-12:
+
+- `uv run pytest`: 162 passed
+- `npm audit --json`: 0 vulnerabilities
+- `npm run lint`: passes
+- `npm run build`: passes
+- Local API and frontend smoke test: passes
 
 ## Deployment
 
@@ -164,12 +170,12 @@ Use a private/incognito browser window:
 
 ## Known Limitations
 
-- User-specific backend routes currently need stronger JWT enforcement before public use.
-- The frontend/backend schema should be checked for contract mismatches before deployment.
+- The app is not yet deployed publicly.
 - Error messages may still expose raw API details instead of friendly copy.
 - Password reset and email verification are not yet implemented.
 - Session completion UI is still an MVP polish item.
 - AI coaching requires `ANTHROPIC_API_KEY`; without it, coaching should fail gracefully.
+- `next lint` is deprecated and should be migrated before a future Next.js 16 upgrade.
 
 ## Clinical and Safety Note
 
