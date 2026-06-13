@@ -12,7 +12,12 @@ The app works locally end-to-end:
 Register -> Log in -> 4-step intake -> 4-week program -> individual session details
 ```
 
-As of 2026-06-12, repo hardening, auth/privacy hardening, dependency/security upgrades, and local smoke testing are complete. The next phase is deployment: Railway backend, Vercel frontend, CORS connection, and public smoke test.
+As of 2026-06-12, repo hardening, auth/privacy hardening, dependency/security upgrades, local smoke testing, and first production deployment are complete.
+
+Production URLs:
+
+- Frontend: `https://frontend-kappa-five-97.vercel.app`
+- Backend health: `https://backend-production-4e8af.up.railway.app/health`
 
 ## Architecture
 
@@ -127,13 +132,19 @@ Verified on 2026-06-12:
 
 ## Deployment
 
-The intended deployment shape is:
+The current deployment shape is:
 
 | Component | Host |
 |---|---|
-| Backend | Railway |
+| Backend | Railway: `https://backend-production-4e8af.up.railway.app` |
 | Database | Railway PostgreSQL |
-| Frontend | Vercel |
+| Frontend | Vercel: `https://frontend-kappa-five-97.vercel.app` |
+
+The first production smoke test completed successfully on 2026-06-12:
+
+- Railway `/health` returned `{"status":"ok"}`.
+- Vercel routes returned 200 for `/`, `/login`, `/register`, `/intake`, `/program`, and `/program/session`.
+- Public API flow succeeded: register, submit intake, generate program, fetch next session, log session, and log glucose reading.
 
 ### Railway Backend
 
@@ -170,7 +181,6 @@ Use a private/incognito browser window:
 
 ## Known Limitations
 
-- The app is not yet deployed publicly.
 - Error messages may still expose raw API details instead of friendly copy.
 - Password reset and email verification are not yet implemented.
 - Session completion UI is still an MVP polish item.

@@ -2,7 +2,7 @@
 
 **As of:** 2026-06-12
 **Branch:** main
-**Status:** Works locally; repo hardening before public deployment
+**Status:** Deployed; first production smoke test complete
 **Roadmap label:** PGIS-Body Weight circa 061226
 
 ---
@@ -328,21 +328,25 @@ Verification:
 
 ## Phase 4 - Deployment
 
+Status: complete.
+
 Goal: deploy only after repo hardening and local verification.
 
 ### Railway backend
 
-1. Generate `JWT_SECRET`.
-2. Connect GitHub repo `chukwumaonyeije/PGIS-body-weight`.
-3. Deploy from `main`.
-4. Add PostgreSQL plugin.
-5. Confirm Railway injects `DATABASE_URL`.
-6. Add `JWT_SECRET`.
-7. Add `ALLOWED_ORIGINS` after Vercel URL is known.
-8. Confirm:
+1. [x] Generate `JWT_SECRET`.
+2. [x] Create Railway project `PGIS Body Weight`.
+3. [x] Add PostgreSQL service.
+4. [x] Create backend service.
+5. [x] Set `DATABASE_URL` from Railway Postgres reference.
+6. [x] Set `JWT_SECRET`.
+7. [x] Set `ENVIRONMENT=production`.
+8. [x] Set `ALLOWED_ORIGINS` after Vercel URL is known.
+9. [x] Deploy backend from `main`.
+10. [x] Confirm:
 
 ```text
-https://<railway-url>/health
+https://backend-production-4e8af.up.railway.app/health
 ```
 
 Expected:
@@ -353,17 +357,26 @@ Expected:
 
 ### Vercel frontend
 
-1. Import same GitHub repo.
-2. Set root directory to `frontend`.
-3. Add:
+1. [x] Deploy from `frontend/`.
+2. [x] Persist production env var:
 
 ```text
-NEXT_PUBLIC_API_URL=https://<railway-url>
+NEXT_PUBLIC_API_URL=https://backend-production-4e8af.up.railway.app
 ```
 
-4. Deploy.
-5. Add Vercel URL to Railway `ALLOWED_ORIGINS`.
-6. Run public end-to-end smoke test.
+3. [x] Add Vercel URLs to Railway `ALLOWED_ORIGINS`.
+4. [x] Run public end-to-end smoke test.
+
+Production URLs:
+
+- Frontend: `https://frontend-kappa-five-97.vercel.app`
+- Backend: `https://backend-production-4e8af.up.railway.app`
+
+Verification:
+
+- Railway `/health`: passed.
+- Vercel routes `/`, `/login`, `/register`, `/intake`, `/program`, `/program/session`: all returned 200.
+- Public API flow: registration, intake submission, program generation, next-session retrieval, session logging, and glucose logging all succeeded.
 
 ---
 
@@ -437,3 +450,5 @@ The app is ready for a limited public MVP when:
 - Railway backend health check passes.
 - Vercel frontend completes the full smoke test.
 - Clinical/safety disclaimers are visible enough for the launch audience.
+
+Current status: all launch-readiness items above are complete for a limited technical MVP. Remaining work is UX polish, privacy/compliance review before real users, and clinical review of thresholds and messaging.
