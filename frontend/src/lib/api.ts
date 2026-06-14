@@ -1,5 +1,52 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export class ApiError extends Error {
+  status: number;
+  detail: unknown;
+  rawBody: string;
+
+  constructor(status: number, rawBody: string, statusText: string) {
+    const detail = parseErrorDetail(rawBody);
+    super(extractErrorMessage(detail) ?? statusText ?? `HTTP ${status}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+    this.rawBody = rawBody;
+  }
+}
+
+function parseErrorDetail(rawBody: string): unknown {
+  if (!rawBody) return null;
+  try {
+    const parsed = JSON.parse(rawBody);
+    return typeof parsed === "object" && parsed !== null && "detail" in parsed
+      ? (parsed as { detail: unknown }).detail
+      : parsed;
+  } catch {
+    return rawBody;
+  }
+}
+
+function extractErrorMessage(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map(item => {
+        if (typeof item === "string") return item;
+        if (typeof item === "object" && item !== null && "msg" in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .join("; ") || null;
+  }
+  if (typeof detail === "object" && detail !== null && "message" in detail) {
+    return String((detail as { message: unknown }).message);
+  }
+  return null;
+}
+
 async function request<T>(
   path: string,
   opts: RequestInit = {},
@@ -13,7 +60,7 @@ async function request<T>(
   const res = await fetch(`${BASE}${path}`, { ...opts, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(text || `HTTP ${res.status}`);
+    throw new ApiError(res.status, text, res.statusText);
   }
   return res.json() as Promise<T>;
 }

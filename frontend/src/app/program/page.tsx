@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getToken, getUserId, clearAuth } from "@/lib/auth";
 import { getProgram, type Program } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import ErrorMessage from "@/components/ErrorMessage";
 import SafetyNotice from "@/components/SafetyNotice";
 
 function ExerciseBadge({ id }: { id: string }) {
@@ -37,7 +39,7 @@ function ProgramPageContent() {
     setLoading(true);
     getProgram(programId, userId, token)
       .then(res => setProgram(res.program))
-      .catch(err => setError(err instanceof Error ? err.message : "Failed to load program"))
+      .catch(err => setError(getFriendlyErrorMessage(err, "program")))
       .finally(() => setLoading(false));
   }, [programId, router]);
 
@@ -102,9 +104,7 @@ function ProgramPageContent() {
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-            {error}
-          </div>
+          <ErrorMessage message={error} className="px-4 py-3" />
         )}
 
         {program && (

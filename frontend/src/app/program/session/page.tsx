@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToken, getUserId } from "@/lib/auth";
 import { getProgram, getCoaching, type Session, type ExerciseInstance } from "@/lib/api";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import ErrorMessage from "@/components/ErrorMessage";
 import SafetyNotice from "@/components/SafetyNotice";
 
 function ExerciseCard({ ex }: { ex: ExerciseInstance }) {
@@ -66,7 +68,7 @@ function SessionPageContent() {
           ?.sessions.find(s => s.day === day);
         setSession(s ?? null);
       })
-      .catch(err => setError(err instanceof Error ? err.message : "Failed to load session"));
+      .catch(err => setError(getFriendlyErrorMessage(err, "session")));
 
     setLoadingCoaching(true);
     getCoaching(programId, week, day, userId, token)
@@ -78,7 +80,7 @@ function SessionPageContent() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600 text-sm">{error}</p>
+        <ErrorMessage message={error} />
       </div>
     );
   }

@@ -9,6 +9,8 @@ import Link from "next/link";
 import { login, register } from "@/lib/api";
 import { saveAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import ErrorMessage from "@/components/ErrorMessage";
 import SafetyNotice from "@/components/SafetyNotice";
 
 const schema = z.object({
@@ -37,7 +39,7 @@ export default function AuthForm({ mode }: Props) {
       saveAuth(res.token, res.user_id);
       router.push("/program");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(getFriendlyErrorMessage(err, "auth"));
     }
   };
 
@@ -86,9 +88,7 @@ export default function AuthForm({ mode }: Props) {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
-              {error}
-            </div>
+            <ErrorMessage message={error} />
           )}
 
           <button

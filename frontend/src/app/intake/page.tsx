@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { submitIntake, generateProgram } from "@/lib/api";
 import { getToken, getUserId } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import ErrorMessage from "@/components/ErrorMessage";
 import SafetyNotice from "@/components/SafetyNotice";
 
 const schema = z.object({
@@ -111,7 +113,7 @@ export default function IntakePage() {
       const programRes = await generateProgram(userId, intakeRes.intake_id, token);
       router.push(`/program?id=${programRes.program_id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(getFriendlyErrorMessage(err, "intake"));
     }
   };
 
@@ -287,9 +289,7 @@ export default function IntakePage() {
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
-                    {error}
-                  </div>
+                  <ErrorMessage message={error} />
                 )}
               </div>
             )}
