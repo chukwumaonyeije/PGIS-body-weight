@@ -178,6 +178,8 @@ export function getProgram(program_id: string, user_id: string, token: string) {
 
 export interface SessionLogPayload {
   user_id: string;
+  week?: number;
+  day_in_week?: number;
   per_exercise_rpe?: Record<string, number>;
   notes?: string | null;
   started_at?: string | null;

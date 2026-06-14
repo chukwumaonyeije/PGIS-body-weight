@@ -112,6 +112,7 @@ function SessionPageContent() {
     const userId = getUserId();
     if (!token || !userId) { router.push("/login"); return; }
     if (!programId) { router.push("/program"); return; }
+    if (!week || !day) { router.push("/program"); return; }
 
     if (completed === "no") {
       setLogError("Only completed sessions are logged for progress. Add notes here, then log when you finish.");
@@ -134,6 +135,8 @@ function SessionPageContent() {
     try {
       const logged = await logSession(programId, {
         user_id: userId,
+        week,
+        day_in_week: day,
         per_exercise_rpe: { overall: parsedRpe },
         notes: notes.trim() || null,
       }, token);

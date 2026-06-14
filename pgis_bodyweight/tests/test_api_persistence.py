@@ -351,6 +351,67 @@ class TestSessionLog:
         assert body["week"] == 1
         assert body["day_in_week"] == 1
 
+    def test_log_explicit_session(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        r = client.post(
+            f"/v1/programs/{program_id}/sessions/log",
+            json={
+                "user_id": user_id,
+                "week": 1,
+                "day_in_week": 2,
+                "per_exercise_rpe": {"overall": 6.0},
+            },
+            headers=headers,
+        )
+
+        assert r.status_code == 201
+        body = r.json()
+        assert body["week"] == 1
+        assert body["day_in_week"] == 2
+
+    def test_log_duplicate_explicit_session_returns_409(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+        payload = {"user_id": user_id, "week": 1, "day_in_week": 1}
+
+        first = client.post(f"/v1/programs/{program_id}/sessions/log", json=payload, headers=headers)
+        second = client.post(f"/v1/programs/{program_id}/sessions/log", json=payload, headers=headers)
+
+        assert first.status_code == 201
+        assert second.status_code == 409
+        assert second.json()["detail"] == "session already logged"
+
+    def test_log_unknown_explicit_session_returns_404(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        r = client.post(
+            f"/v1/programs/{program_id}/sessions/log",
+            json={"user_id": user_id, "week": 99, "day_in_week": 99},
+            headers=headers,
+        )
+
+        assert r.status_code == 404
+        assert r.json()["detail"] == "session not found"
+
+    def test_log_requires_week_and_day_together(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        r = client.post(
+            f"/v1/programs/{program_id}/sessions/log",
+            json={"user_id": user_id, "week": 1},
+            headers=headers,
+        )
+
+        assert r.status_code == 422
+
     def test_log_all_sessions_then_409(self, client):
         user_id, headers = _register_user(client)
         intake = {**CLEAN_INTAKE, "days_per_week": 1}

@@ -131,6 +131,8 @@ class GenerateFromIntakeResponse(BaseModel):
 
 class SessionLogRequest(BaseModel):
     user_id: str
+    week: int | None = None
+    day_in_week: int | None = None
     per_exercise_rpe: dict[str, float] | None = None
     notes: str | None = None
     started_at: str | None = None   # ISO 8601

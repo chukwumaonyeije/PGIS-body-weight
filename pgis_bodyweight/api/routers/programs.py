@@ -207,7 +207,7 @@ def log_session(
     current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> SessionLogResponse:
-    """Log completion of a session. week and day are inferred from the next uncompleted slot."""
+    """Log completion of a session. Explicit week/day targets are preferred."""
     require_matching_user(body.user_id, current_user_id)
     record = db.get(GeneratedProgram, program_id)
     if record is None or record.user_id != body.user_id:
@@ -221,15 +221,17 @@ def log_session(
     }
 
     program = ProgramOut.model_validate(record.program_json)
-    target_week, target_day = None, None
-    for week in program.weeks:
-        for session in week.sessions:
-            if (week.week_number, session.day) not in completed:
-                target_week = week.week_number
-                target_day = session.day
-                break
-        if target_week is not None:
-            break
+    if body.week is not None or body.day_in_week is not None:
+        if body.week is None or body.day_in_week is None:
+            raise HTTPException(status_code=422, detail="week and day_in_week must be provided together")
+
+        target_week, target_day = body.week, body.day_in_week
+        if not _program_has_session(program, target_week, target_day):
+            raise HTTPException(status_code=404, detail="session not found")
+        if (target_week, target_day) in completed:
+            raise HTTPException(status_code=409, detail="session already logged")
+    else:
+        target_week, target_day = _next_open_slot(program, completed)
 
     if target_week is None:
         raise HTTPException(status_code=409, detail="all sessions already logged")
@@ -324,6 +326,13 @@ def _next_open_slot(program: ProgramOut, completed_slots: set[tuple[int, int]]) 
             if (week.week_number, session.day) not in completed_slots:
                 return week.week_number, session.day
     return None, None
+
+
+def _program_has_session(program: ProgramOut, target_week: int, target_day: int) -> bool:
+    return any(
+        week.week_number == target_week and any(session.day == target_day for session in week.sessions)
+        for week in program.weeks
+    )
 
 
 def _recent_rpe_trend(logs: list[SessionLog]) -> list[RpeTrendItem]:
