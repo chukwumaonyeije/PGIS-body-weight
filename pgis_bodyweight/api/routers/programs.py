@@ -9,7 +9,10 @@ from pgis_bodyweight.api.schemas import (
     GenerateFromIntakeResponse,
     GenerationResponse,
     IntakeRequest,
+    GlucoseTrendItem,
     ProgramOut,
+    ProgramProgressResponse,
+    RpeTrendItem,
     SessionLogRequest,
     SessionLogResponse,
     SessionOut,
@@ -20,7 +23,14 @@ from pgis_bodyweight.engine.generator import generate_mesocycle
 from pgis_bodyweight.engine.types import MovementPattern
 from pgis_bodyweight.library import build_exercise_pattern_map
 from pgis_bodyweight.models.db import get_db
-from pgis_bodyweight.models.tables import GeneratedProgram, IntakeSubmission, ProgressionState, SessionLog, User
+from pgis_bodyweight.models.tables import (
+    GeneratedProgram,
+    GlucoseReading,
+    IntakeSubmission,
+    ProgressionState,
+    SessionLog,
+    User,
+)
 
 router = APIRouter(prefix="/v1/programs", tags=["programs"])
 
@@ -254,6 +264,83 @@ def log_session(
         day_in_week=target_day,
         level_changes=level_changes,
     )
+
+
+@router.get("/{program_id}/progress", response_model=ProgramProgressResponse)
+def get_program_progress(
+    program_id: str,
+    user_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> ProgramProgressResponse:
+    """Return a small progress summary for the active 4-week program."""
+    require_matching_user(user_id, current_user_id)
+    record = db.get(GeneratedProgram, program_id)
+    if record is None or record.user_id != user_id:
+        raise HTTPException(status_code=404, detail="program not found")
+
+    logs = (
+        db.query(SessionLog)
+        .filter(SessionLog.program_id == program_id)
+        .order_by(SessionLog.completed_at.desc())
+        .all()
+    )
+    completed_slots = {(log.week, log.day_in_week) for log in logs}
+    latest_log = logs[0] if logs else None
+
+    program = ProgramOut.model_validate(record.program_json)
+    current_week, current_day = _next_open_slot(program, completed_slots)
+    program_complete = current_week is None
+
+    glucose_entries = (
+        db.query(GlucoseReading)
+        .filter(GlucoseReading.user_id == user_id)
+        .order_by(GlucoseReading.recorded_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    return ProgramProgressResponse(
+        program_id=program_id,
+        sessions_completed=len(logs),
+        most_recent_session_date=latest_log.completed_at.isoformat() if latest_log else None,
+        recent_rpe_trend=_recent_rpe_trend(logs),
+        recent_glucose_entries=[
+            GlucoseTrendItem(
+                recorded_at=entry.recorded_at.isoformat(),
+                value_mgdl=entry.value_mgdl,
+            )
+            for entry in reversed(glucose_entries)
+        ],
+        current_week=current_week,
+        current_day=current_day,
+        program_complete=program_complete,
+    )
+
+
+def _next_open_slot(program: ProgramOut, completed_slots: set[tuple[int, int]]) -> tuple[int | None, int | None]:
+    for week in program.weeks:
+        for session in week.sessions:
+            if (week.week_number, session.day) not in completed_slots:
+                return week.week_number, session.day
+    return None, None
+
+
+def _recent_rpe_trend(logs: list[SessionLog]) -> list[RpeTrendItem]:
+    trend: list[RpeTrendItem] = []
+    for log in logs:
+        rpe_data = log.per_exercise_rpe or {}
+        if "overall" in rpe_data:
+            rpe = float(rpe_data["overall"])
+        elif rpe_data:
+            values = [float(value) for value in rpe_data.values()]
+            rpe = sum(values) / len(values)
+        else:
+            continue
+        trend.append(RpeTrendItem(completed_at=log.completed_at.isoformat(), rpe=round(rpe, 1)))
+        if len(trend) == 5:
+            break
+    return list(reversed(trend))
 
 
 def _apply_autoregulation(

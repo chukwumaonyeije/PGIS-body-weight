@@ -363,3 +363,97 @@ class TestSessionLog:
 
         r = client.post(f"/v1/programs/{program_id}/sessions/log", json={"user_id": user_id}, headers=headers)
         assert r.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# Program progress
+# ---------------------------------------------------------------------------
+
+class TestProgramProgress:
+    def test_initial_progress_shape(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        r = client.get(
+            f"/v1/programs/{program_id}/progress",
+            params={"user_id": user_id},
+            headers=headers,
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["program_id"] == program_id
+        assert body["sessions_completed"] == 0
+        assert body["most_recent_session_date"] is None
+        assert body["recent_rpe_trend"] == []
+        assert body["recent_glucose_entries"] == []
+        assert body["current_week"] == 1
+        assert body["current_day"] == 1
+        assert body["program_complete"] is False
+
+    def test_progress_after_session_log(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        log_response = client.post(
+            f"/v1/programs/{program_id}/sessions/log",
+            json={"user_id": user_id, "per_exercise_rpe": {"overall": 6.5}, "notes": "complete"},
+            headers=headers,
+        )
+        assert log_response.status_code == 201
+
+        r = client.get(
+            f"/v1/programs/{program_id}/progress",
+            params={"user_id": user_id},
+            headers=headers,
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["sessions_completed"] == 1
+        assert body["most_recent_session_date"] is not None
+        assert body["recent_rpe_trend"][-1]["rpe"] == 6.5
+        assert (body["current_week"], body["current_day"]) != (1, 1)
+
+    def test_progress_includes_recent_glucose_entries(self, client):
+        user_id, headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+        log_response = client.post(
+            f"/v1/programs/{program_id}/sessions/log",
+            json={"user_id": user_id, "per_exercise_rpe": {"overall": 7.0}},
+            headers=headers,
+        )
+        log_id = log_response.json()["log_id"]
+
+        r = client.post(
+            "/v1/glucose",
+            json={"user_id": user_id, "value_mgdl": 104.0, "session_log_id": log_id},
+            headers=headers,
+        )
+        assert r.status_code == 201
+
+        r = client.get(
+            f"/v1/programs/{program_id}/progress",
+            params={"user_id": user_id},
+            headers=headers,
+        )
+
+        assert r.status_code == 200
+        assert r.json()["recent_glucose_entries"][-1]["value_mgdl"] == 104.0
+
+    def test_progress_rejects_wrong_token_user(self, client):
+        user_id, headers = _register_user(client)
+        _, other_headers = _register_user(client)
+        intake_id = _submit_intake(client, user_id, headers)["intake_id"]
+        program_id = _generate_program(client, user_id, headers, intake_id)["program_id"]
+
+        r = client.get(
+            f"/v1/programs/{program_id}/progress",
+            params={"user_id": user_id},
+            headers=other_headers,
+        )
+
+        assert r.status_code == 403

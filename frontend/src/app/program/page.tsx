@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToken, getUserId, clearAuth } from "@/lib/auth";
-import { getProgram, type Program } from "@/lib/api";
+import { getProgram, getProgramProgress, type Program, type ProgramProgress } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import ErrorMessage from "@/components/ErrorMessage";
@@ -18,6 +18,93 @@ function ExerciseBadge({ id }: { id: string }) {
   );
 }
 
+function formatDate(value: string | null): string {
+  if (!value) return "Not logged yet";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatShortDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
+}
+
+function ProgressDashboard({ progress }: { progress: ProgramProgress }) {
+  const currentSlot = progress.program_complete
+    ? "Program complete"
+    : `Week ${progress.current_week}, Day ${progress.current_day}`;
+
+  return (
+    <section className="bg-white border rounded-lg p-5 space-y-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Progress</h2>
+          <p className="text-sm text-gray-500 mt-1">Current 4-week program summary.</p>
+        </div>
+        <span className="text-sm font-medium text-brand-700 bg-brand-50 border border-brand-100 rounded-full px-3 py-1">
+          {currentSlot}
+        </span>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3 border-y border-gray-100 py-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Sessions completed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{progress.sessions_completed}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Most recent session</p>
+          <p className="text-base font-medium text-gray-900 mt-2">{formatDate(progress.most_recent_session_date)}</p>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800 mb-2">Recent RPE trend</h3>
+          {progress.recent_rpe_trend.length > 0 ? (
+            <div className="space-y-2">
+              {progress.recent_rpe_trend.map(item => (
+                <div key={item.completed_at} className="flex items-center gap-3">
+                  <span className="w-16 text-xs text-gray-500">{formatShortDate(item.completed_at)}</span>
+                  <div className="h-2 flex-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500"
+                      style={{ width: `${Math.max(8, Math.min(100, item.rpe * 10))}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-right text-xs font-medium text-gray-700">{item.rpe}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No RPE entries yet.</p>
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800 mb-2">Recent glucose entries</h3>
+          {progress.recent_glucose_entries.length > 0 ? (
+            <div className="space-y-2">
+              {progress.recent_glucose_entries.map(item => (
+                <div key={item.recorded_at} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                  <span className="text-gray-500">{formatDate(item.recorded_at)}</span>
+                  <span className="font-medium text-gray-900">{item.value_mgdl} mg/dL</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No glucose entries yet.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ProgramPageContent() {
   const router = useRouter();
   const params = useSearchParams();
@@ -26,8 +113,10 @@ function ProgramPageContent() {
   const clearanceReason = params.get("reason");
 
   const [program, setProgram] = useState<Program | null>(null);
+  const [progress, setProgress] = useState<ProgramProgress | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progressError, setProgressError] = useState<string | null>(null);
   const [openWeek, setOpenWeek] = useState<number>(1);
 
   useEffect(() => {
@@ -41,6 +130,10 @@ function ProgramPageContent() {
       .then(res => setProgram(res.program))
       .catch(err => setError(getFriendlyErrorMessage(err, "program")))
       .finally(() => setLoading(false));
+
+    getProgramProgress(programId, userId, token)
+      .then(setProgress)
+      .catch(err => setProgressError(getFriendlyErrorMessage(err, "program")));
   }, [programId, router]);
 
   const handleLogout = () => {
@@ -116,6 +209,18 @@ function ProgramPageContent() {
                   Engine {program.engine_version} · {program.hypo_risk === "elevated" ? "Pre-session glucose check required" : "Standard hypo risk"}
                 </p>
               </div>
+            </div>
+
+            <div className="mb-6">
+              {progress ? (
+                <ProgressDashboard progress={progress} />
+              ) : progressError ? (
+                <ErrorMessage message={progressError} className="px-4 py-3" />
+              ) : (
+                <div className="bg-white border rounded-lg p-5 text-sm text-gray-400">
+                  Loading progress...
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

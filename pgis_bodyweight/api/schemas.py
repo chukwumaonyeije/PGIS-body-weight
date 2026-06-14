@@ -145,6 +145,27 @@ class SessionLogResponse(BaseModel):
     level_changes: dict[str, int] = {}  # pattern → new level; empty when no RPE submitted
 
 
+class RpeTrendItem(BaseModel):
+    completed_at: str
+    rpe: float
+
+
+class GlucoseTrendItem(BaseModel):
+    recorded_at: str
+    value_mgdl: float
+
+
+class ProgramProgressResponse(BaseModel):
+    program_id: str
+    sessions_completed: int
+    most_recent_session_date: str | None
+    recent_rpe_trend: list[RpeTrendItem]
+    recent_glucose_entries: list[GlucoseTrendItem]
+    current_week: int | None
+    current_day: int | None
+    program_complete: bool
+
+
 class CoachingResponse(BaseModel):
     coaching_text: str | None
 

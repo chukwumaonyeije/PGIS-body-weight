@@ -176,6 +176,78 @@ export function getProgram(program_id: string, user_id: string, token: string) {
   return request<GenerateResponse>(`/v1/programs/${program_id}?user_id=${user_id}`, {}, token);
 }
 
+export interface SessionLogPayload {
+  user_id: string;
+  per_exercise_rpe?: Record<string, number>;
+  notes?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+}
+
+export interface SessionLogResponse {
+  log_id: string;
+  program_id: string;
+  week: number;
+  day_in_week: number;
+  level_changes: Record<string, number>;
+}
+
+export function logSession(program_id: string, payload: SessionLogPayload, token: string) {
+  return request<SessionLogResponse>(`/v1/programs/${program_id}/sessions/log`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export interface GlucoseEntryResponse {
+  reading_id: string;
+  user_id: string;
+  value_mgdl: number;
+  recorded_at: string;
+}
+
+export function logGlucose(
+  user_id: string,
+  value_mgdl: number,
+  token: string,
+  session_log_id?: string,
+  notes?: string | null,
+) {
+  return request<GlucoseEntryResponse>("/v1/glucose", {
+    method: "POST",
+    body: JSON.stringify({ user_id, value_mgdl, session_log_id, notes }),
+  }, token);
+}
+
+export interface RpeTrendItem {
+  completed_at: string;
+  rpe: number;
+}
+
+export interface GlucoseTrendItem {
+  recorded_at: string;
+  value_mgdl: number;
+}
+
+export interface ProgramProgress {
+  program_id: string;
+  sessions_completed: number;
+  most_recent_session_date: string | null;
+  recent_rpe_trend: RpeTrendItem[];
+  recent_glucose_entries: GlucoseTrendItem[];
+  current_week: number | null;
+  current_day: number | null;
+  program_complete: boolean;
+}
+
+export function getProgramProgress(program_id: string, user_id: string, token: string) {
+  return request<ProgramProgress>(
+    `/v1/programs/${program_id}/progress?user_id=${user_id}`,
+    {},
+    token,
+  );
+}
+
 // ── Coaching ──────────────────────────────────────────────────────────────────
 
 export interface CoachingResponse {

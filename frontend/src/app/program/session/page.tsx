@@ -1,10 +1,17 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToken, getUserId } from "@/lib/auth";
-import { getProgram, getCoaching, type Session, type ExerciseInstance } from "@/lib/api";
+import {
+  getCoaching,
+  getProgram,
+  logGlucose,
+  logSession,
+  type ExerciseInstance,
+  type Session,
+} from "@/lib/api";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import ErrorMessage from "@/components/ErrorMessage";
 import SafetyNotice from "@/components/SafetyNotice";
@@ -53,6 +60,13 @@ function SessionPageContent() {
   const [coaching, setCoaching] = useState<string | null>(null);
   const [loadingCoaching, setLoadingCoaching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<"yes" | "no">("yes");
+  const [rpe, setRpe] = useState("6");
+  const [notes, setNotes] = useState("");
+  const [glucoseValue, setGlucoseValue] = useState("");
+  const [logging, setLogging] = useState(false);
+  const [logSuccess, setLogSuccess] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -89,6 +103,58 @@ function SessionPageContent() {
   const warmup   = blocks.find(b => b.name === "warmup");
   const main     = blocks.find(b => b.name === "main");
   const cooldown = blocks.find(b => b.name === "cooldown");
+
+  const handleCompletionSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLogError(null);
+
+    const token = getToken();
+    const userId = getUserId();
+    if (!token || !userId) { router.push("/login"); return; }
+    if (!programId) { router.push("/program"); return; }
+
+    if (completed === "no") {
+      setLogError("Only completed sessions are logged for progress. Add notes here, then log when you finish.");
+      return;
+    }
+
+    const parsedRpe = Number(rpe);
+    if (!Number.isFinite(parsedRpe) || parsedRpe < 1 || parsedRpe > 10) {
+      setLogError("Enter an RPE from 1 to 10.");
+      return;
+    }
+
+    const parsedGlucose = glucoseValue ? Number(glucoseValue) : null;
+    if (parsedGlucose !== null && (!Number.isFinite(parsedGlucose) || parsedGlucose <= 0)) {
+      setLogError("Enter a glucose value greater than 0, or leave it blank.");
+      return;
+    }
+
+    setLogging(true);
+    try {
+      const logged = await logSession(programId, {
+        user_id: userId,
+        per_exercise_rpe: { overall: parsedRpe },
+        notes: notes.trim() || null,
+      }, token);
+
+      if (parsedGlucose !== null) {
+        await logGlucose(
+          userId,
+          parsedGlucose,
+          token,
+          logged.log_id,
+          notes.trim() || null,
+        );
+      }
+
+      setLogSuccess(true);
+    } catch (err) {
+      setLogError(getFriendlyErrorMessage(err, "session"));
+    } finally {
+      setLogging(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -163,6 +229,115 @@ function SessionPageContent() {
         )}
 
         <SafetyNotice compact />
+
+        <section className="bg-white border rounded-xl p-5">
+          {logSuccess ? (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Session logged</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Your progress dashboard has been updated.
+                </p>
+              </div>
+              <Link
+                href={`/program?id=${programId}`}
+                className="inline-flex items-center justify-center bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
+              >
+                Back to program
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleCompletionSubmit} className="space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Complete session</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Log the session once you have finished training.
+                </p>
+              </div>
+
+              <fieldset>
+                <legend className="text-sm font-medium text-gray-700 mb-2">Completed?</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["yes", "no"] as const).map(value => (
+                    <label
+                      key={value}
+                      className={`border rounded-lg px-3 py-2 text-sm cursor-pointer ${
+                        completed === value ? "border-brand-500 bg-brand-50 text-brand-700" : "border-gray-200 text-gray-600"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="completed"
+                        value={value}
+                        checked={completed === value}
+                        onChange={() => setCompleted(value)}
+                        className="sr-only"
+                      />
+                      {value === "yes" ? "Yes" : "No"}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="rpe">
+                  RPE
+                </label>
+                <input
+                  id="rpe"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value={rpe}
+                  onChange={event => setRpe(event.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="glucose">
+                  Glucose value, optional
+                </label>
+                <input
+                  id="glucose"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={glucoseValue}
+                  onChange={event => setGlucoseValue(event.target.value)}
+                  placeholder="mg/dL"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="notes">
+                  Notes
+                </label>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={event => setNotes(event.target.value)}
+                  rows={4}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  placeholder="How did the session feel?"
+                />
+              </div>
+
+              {logError && <ErrorMessage message={logError} className="px-4 py-3" />}
+
+              <button
+                type="submit"
+                disabled={logging}
+                className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 text-white text-sm font-medium px-4 py-2 rounded-lg"
+              >
+                {logging ? "Logging..." : "Log session"}
+              </button>
+            </form>
+          )}
+        </section>
       </main>
     </div>
   );
